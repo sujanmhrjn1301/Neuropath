@@ -369,6 +369,101 @@ const mainStyles = `
   .mp-trust-icon { color: var(--blue); font-size: 15px; }
   .mp-copy { margin-top: 24px; font-size: 12px; color: #9CA3AF; }
 
+  /* LOGIN PAGE */
+  .login-wrap {
+    min-height: calc(100vh - 60px);
+    background: var(--gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 20px 60px;
+  }
+  .login-card {
+    background: #fff;
+    border: 1px solid var(--gray-border);
+    border-radius: 18px;
+    padding: 32px 32px 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+  }
+  .login-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--dark);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .login-sub {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  .login-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-bottom: 6px;
+  }
+  .login-input {
+    width: 100%;
+    border: 1.5px solid var(--gray-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--dark);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .login-input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(27,78,248,.08);
+  }
+  .login-field { margin-bottom: 16px; }
+  .login-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    font-size: 12px;
+    color: var(--gray);
+  }
+  .login-link {
+    color: var(--blue);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-login-primary {
+    width: 100%;
+    margin-top: 4px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 16px;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(27,78,248,.28);
+    transition: background .2s, transform .15s, box-shadow .2s;
+  }
+  .btn-login-primary:hover { background: var(--blue-hover); transform: translateY(-1px); box-shadow: 0 6px 22px rgba(27,78,248,.4); }
+  .btn-login-primary:disabled { opacity: .7; cursor: not-allowed; transform: none; box-shadow: 0 4px 18px rgba(27,78,248,.28); }
+  .login-footer {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #9CA3AF;
+    text-align: center;
+  }
+
   /* Loading state */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -453,7 +548,7 @@ function KnowledgeGraph() {
 }
 
 /* ─────────────────────────── LANDING PAGE ─────────────────────────── */
-function LandingPage({ onGetStarted }) {
+function LandingPage({ onGetStarted, onLogin }) {
   const [searchVal, setSearchVal] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -510,7 +605,12 @@ function LandingPage({ onGetStarted }) {
           ))}
         </ul>
         <div className="np-nav-right">
-          <button className="btn-ghost">Log In</button>
+          <button
+            className="btn-ghost"
+            onClick={() => onLogin && onLogin()}
+          >
+            Log In
+          </button>
           <button className="btn-blue" onClick={() => onGetStarted("")}>Try NeuroPath</button>
           <button
             className="np-mobile-menu-toggle"
@@ -618,6 +718,86 @@ function LandingPage({ onGetStarted }) {
         </div>
         <div className="footer-copy">© 2026 NeuroPath AI Inc. All rights reserved. Mapping human knowledge, one node at a time.</div>
       </footer>
+    </div>
+  );
+}
+
+/* ─────────────────────────── LOGIN PAGE ─────────────────────────── */
+function LoginPage({ onBack, onLoginSuccess }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) return;
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      if (onLoginSuccess) onLoginSuccess();
+    }, 800);
+  };
+
+  return (
+    <div className="page-enter">
+      {/* NAV */}
+      <nav className="np-nav">
+        <div className="np-logo" onClick={onBack} style={{ cursor: "pointer" }}>
+          <div className="np-logo-icon"><LogoIcon /></div>
+          <span className="np-logo-text">NeuroPath</span>
+        </div>
+      </nav>
+
+      {/* MAIN CONTENT */}
+      <div className="login-wrap">
+        <div className="login-card fu d3">
+          <h1 className="login-title">Welcome</h1>
+          <p className="login-sub">Sign in to access your personalized learning paths.</p>
+
+          <form onSubmit={handleSubmit}>
+            <div className="login-field">
+              <label className="login-label">Email</label>
+              <input
+                className="login-input"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="login-field">
+              <label className="login-label">Password</label>
+              <input
+                className="login-input"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div className="login-meta-row">
+              <span>
+                <input type="checkbox" id="remember" style={{ marginRight: 6 }} />
+                <label htmlFor="remember">Remember me</label>
+              </span>
+              <span className="login-link">Forgot password?</span>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-login-primary"
+              disabled={loading || !email.trim() || !password.trim()}
+            >
+              {loading ? "Signing you in..." : "Log In"}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            Don’t have an account? <span className="login-link">Sign up</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -758,13 +938,28 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const goToLogin = () => {
+    setPage("login");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleLoginSuccess = () => {
+    setPage("main");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <>
       <style>{sharedStyles + landingStyles + mainStyles}</style>
-      {page === "landing"
-        ? <LandingPage onGetStarted={goToMain} />
-        : <MainPage initialGoal={prefillGoal} onBack={goToLanding} />
-      }
+      {page === "landing" && (
+        <LandingPage onGetStarted={goToMain} onLogin={goToLogin} />
+      )}
+      {page === "main" && (
+        <MainPage initialGoal={prefillGoal} onBack={goToLanding} />
+      )}
+      {page === "login" && (
+        <LoginPage onBack={goToLanding} onLoginSuccess={handleLoginSuccess} />
+      )}
     </>
   );
 }
