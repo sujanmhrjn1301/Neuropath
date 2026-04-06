@@ -284,7 +284,7 @@ const mainStyles = `
 
   .mp-card {
     background: #fff; border: 1px solid var(--gray-border); border-radius: 18px;
-    padding: 32px; width: 100%; max-width: 540px;
+    padding: 40px 32px; width: 100%; max-width: 640px;
     box-shadow: 0 4px 24px rgba(0,0,0,.07);
   }
   .mp-field-label {
@@ -306,9 +306,16 @@ const mainStyles = `
   /* Difficulty toggle */
   .diff-group { display: flex; gap: 0; }
   .diff-btn {
-    flex: 1; padding: 9px 0; border: 1.5px solid var(--gray-border);
-    background: #fff; cursor: pointer; font-family: var(--font-body); font-size: 13px;
-    font-weight: 500; color: var(--gray); transition: all .18s;
+    flex: 1;
+    padding: 12px 16px;
+    border: 1.5px solid var(--gray-border);
+    background: #fff;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray);
+    transition: all .18s;
     margin-right: -1px;
   }
   .diff-btn:first-child { border-radius: 8px 0 0 8px; }
