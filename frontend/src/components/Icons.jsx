@@ -1,11 +1,15 @@
-export function LogoIcon({ size = 20, color = "white", strokeWidth = 2.5 }) {
+export function LogoIcon() {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="8" width="6" height="7" rx="1.5" />
-      <rect x="15" y="2" width="6" height="7" rx="1.5" />
-      <rect x="15" y="15" width="6" height="7" rx="1.5" />
-      <path d="M9 11.5h3.5v-6h2.5" />
-      <path d="M12.5 11.5v7h2.5" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="4" fill="white" />
+      <circle cx="3" cy="4" r="2" fill="white" opacity="0.7" />
+      <circle cx="15" cy="4" r="2" fill="white" opacity="0.7" />
+      <circle cx="15" cy="14" r="2" fill="white" opacity="0.7" />
+      <circle cx="3" cy="14" r="2" fill="white" opacity="0.7" />
+      <line x1="9" y1="5" x2="3" y2="4" stroke="white" strokeWidth="1" opacity="0.5" />
+      <line x1="9" y1="5" x2="15" y2="4" stroke="white" strokeWidth="1" opacity="0.5" />
+      <line x1="9" y1="13" x2="15" y2="14" stroke="white" strokeWidth="1" opacity="0.5" />
+      <line x1="9" y1="13" x2="3" y2="14" stroke="white" strokeWidth="1" opacity="0.5" />
     </svg>
   );
 }

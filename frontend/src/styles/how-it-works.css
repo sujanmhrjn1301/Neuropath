@@ -1,0 +1,159 @@
+/* ───────────────────── HOW IT WORKS PAGE STYLES ───────────────────── */
+.hiw-wrap {
+  min-height: calc(100vh - 60px);
+  background: var(--gray-light);
+  padding: 25px 40px 25px;
+  display: flex;
+  justify-content: center;
+}
+
+.hiw-inner {
+  width: 100%;
+  max-width: 960px;
+}
+
+.hiw-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 10px;
+}
+
+.hiw-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px,4.2vw,46px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--dark);
+  margin-bottom: 14px;
+}
+
+.hiw-subtitle {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--gray);
+  max-width: 580px;
+  margin-bottom: 32px;
+}
+
+.hiw-steps-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.hiw-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hiw-step {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid var(--gray-border);
+  padding: 16px 18px 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.04);
+}
+
+.hiw-step-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+
+.hiw-step-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+
+.hiw-step-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--gray);
+}
+
+.hiw-aside-card {
+  background: #020617;
+  color: #E5E7EB;
+  border-radius: 18px;
+  padding: 20px 20px 18px;
+  box-shadow: 0 18px 50px rgba(15,23,42,.55);
+}
+
+.hiw-aside-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--blue-light);
+  background: rgba(37,99,235,.16);
+  border-radius: 999px;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+}
+
+.hiw-aside-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.hiw-aside-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #CBD5F5;
+}
+
+.hiw-aside-metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.hiw-aside-metric {
+  min-width: 120px;
+}
+
+.hiw-aside-metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .7;
+  margin-bottom: 3px;
+}
+
+.hiw-aside-metric-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.hiw-footer-note {
+  margin-top: 22px;
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+@media (max-width: 860px) {
+  .hiw-wrap {
+    padding: 60px 20px 40px;
+  }
+  .hiw-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
