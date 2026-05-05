@@ -794,3 +794,101 @@ Okay, great! Let's dive into your experience with React and state management, sp
 <br>
 
 3.  When building forms in React, how do you usually handle form validation and error messages?
+
+
+--- NEW STREAM ---
+Okay, great! To start, let's focus on the requirements for building your console-based banking system.
+
+1.  Have you worked with any data structures (like lists, dictionaries, or classes) to store and manage account information (account number, balance, transaction history)? If so, can you describe the scale or complexity of the data you've managed?
+
+2.  What is your experience with handling user input and output in Java? Have you built any interactive console applications before?
+
+3.  Have you ever implemented any form of data persistence (e.g., saving data to a file) to store account information between sessions?
+
+
+--- NEW STREAM ---
+Okay, great. Since you want to learn .NET, let's start with some foundational questions.
+
+1.  Have you had any experience with C# (pronounced "See Sharp")? Even basic familiarity from tutorials or simple projects would be helpful to know. .NET heavily relies on C#.
+
+2.  Are you familiar with any Integrated Development Environments (IDEs) like Visual Studio or JetBrains Rider? Have you used any code editors like VS Code for C# development?
+
+
+
+--- NEW STREAM ---
+Okay, great. Since you want to learn .NET, let's start with some questions about your familiarity with the .NET ecosystem and related concepts.
+
+1.  Have you ever worked with any specific .NET languages like C# or F#? If so, can you describe the extent of your experience (e.g., personal projects, coursework, professional work)?
+
+2.  Are you familiar with the .NET framework or .NET Core/.NET? Have you worked with any specific versions or know the difference between them?
+
+3.  Do you have any experience with ASP.NET for web development, or Xamarin/MAUI for cross-platform app development?
+
+
+--- NEW STREAM ---
+Okay, great! Since you want to learn .NET, let's start with some foundational concepts.
+
+1.  Have you worked with any object-oriented programming languages other than Java or Python? If so, which ones and at what scale?
+
+2.  Are you familiar with the .NET ecosystem, such as C#, .NET Framework, .NET Core, or .NET (5+)? If so, can you describe at a high level how they relate to each other?
+
+3.  Do you have any experience with Integrated Development Environments (IDEs) like Visual Studio or JetBrains Rider?
+
+
+
+--- NEW STREAM ---
+Okay, great. Let's dive into .NET. To start, could you tell me about any experience you have with the .NET framework or .NET Core/.NET?
+
+What types of applications have you worked on, if any, using .NET (e.g., web applications, desktop applications, or other)?
+
+What aspects of .NET development are you most interested in exploring?
+
+
+
+--- NEW STREAM ---
+Okay, great. Since your goal is to build a SaaS product, let's narrow down the assessment to skills directly relevant to that.
+
+1.  Have you had any experience with web frameworks like Spring or Spring Boot?
+
+2.  Have you worked with any cloud platforms such as AWS, Azure, or Google Cloud?
+
+3.  Have you ever designed or implemented RESTful APIs?
+
+
+--- NEW STREAM ---
+Thanks. To expand on that:
+
+1.  If you have used any cloud platforms, what services did you utilize (e.g., compute, storage, databases)?
+
+2.  Have you worked with frameworks beyond REST (like GraphQL or WebSockets)? Is so, please elaborate on the context.
+
+3.  What is your experience with front-end technologies (HTML, CSS, JavaScript, and modern frameworks like React, Angular, or Vue.js)?
+
+--- NEW STREAM ---
+Okay, great. Since you're interested in learning machine learning, let's start by exploring your background in a few key areas.
+
+1.  Have you worked with any specific machine learning libraries or frameworks like scikit-learn, TensorFlow, PyTorch, or others? If so, what types of models have you built or experimented with?
+
+2.  What experience do you have with data preprocessing and feature engineering techniques? For example, have you used techniques like standardization, normalization, one-hot encoding, or feature selection?
+
+
+
+--- NEW STREAM ---
+Okay, great. To get a better sense of your current skills relevant to machine learning, let's explore your background.
+
+1. Have you previously worked with any statistical modeling techniques, such as linear regression, hypothesis testing, or A/B testing?
+
+2. What is your experience in data visualization? Have you used libraries like Matplotlib or Seaborn to create plots and charts?
+
+
+
+--- NEW STREAM ---
+No problem! It's perfectly fine to be new to this. Have you ever used complex Excel formulas, or perhaps tinkered with a basic website? Sometimes adjacent skills can be helpful stepping stones.
+
+
+--- NEW STREAM ---
+Okay, I understand. Since you're just starting out, let's try a slightly different approach. Have you worked with data in any form, perhaps in spreadsheets or simple lists? Also, are you familiar with the concept of algorithms, even on a basic level?
+
+--- NEW STREAM ---
+Since we seem to be having trouble establishing a baseline, I'll proceed with a general assessment based on the assumption that you're starting with very little prior knowledge in machine learning.
+

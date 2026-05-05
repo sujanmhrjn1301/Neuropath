@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { LogoIcon } from "../components/Icons";
 import "../styles/pages.css";
 
-export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, user }) {
+export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user }) {
   const [loading, setLoading] = useState(true);
   const [allPaths, setAllPaths] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
@@ -162,10 +162,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
       const decoder = new TextDecoder();
       let aiMessage = { role: "assistant", content: "" };
       let lineBuffer = "";
-
-      if (!isSilentInit) {
-        setChatMessages(prev => [...prev, aiMessage]);
-      }
+      let messageAdded = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -182,15 +179,9 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
               if (data.text) {
                 aiMessage.content += data.text;
-                if (isSilentInit) {
-                  if (aiMessage.content.length === data.text.length) {
-                    setChatMessages([aiMessage]);
-                  } else {
-                    setChatMessages(prev => {
-                      const last = prev[prev.length - 1];
-                      return [...prev.slice(0, -1), { ...last, content: aiMessage.content }];
-                    });
-                  }
+                if (!messageAdded) {
+                  messageAdded = true;
+                  setChatMessages(prev => [...prev, aiMessage]);
                 } else {
                   setChatMessages(prev => {
                     const last = prev[prev.length - 1];
@@ -579,12 +570,27 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
             </h2>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "20px", position: "relative", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", position: "relative", flexShrink: 0 }}>
+            <button
+              onClick={onUpdateKnowledge}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "10px 16px", borderRadius: "8px",
+                background: "#fff", color: "#5A72F6",
+                border: "1.5px solid #5A72F6", fontSize: "14px", fontWeight: "600",
+                cursor: "pointer", transition: "all 0.2s"
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.boxShadow = "0 0 12px rgba(90, 114, 246, 0.15)"; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "none"; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 2.2" /></svg>
+              <span>Update Knowledge</span>
+            </button>
             <button
               onClick={onNewPath}
               style={{
                 display: "flex", alignItems: "center", gap: "8px",
-                padding: "7px 14px", borderRadius: "8px",
+                padding: "8px 16px", borderRadius: "8px",
                 background: "rgba(248, 250, 252, 0.5)", color: "#5A72F6",
                 border: "1.5px dashed #5A72F6", fontSize: "14px", fontWeight: "600",
                 cursor: "pointer", transition: "all 0.2s"
@@ -661,8 +667,38 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                   {allPaths.slice(0, 3).map(path => (
                     <div key={path.id} onClick={() => loadSpecificPath(path.id)} style={{ background: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", padding: "24px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "16px", minHeight: "160px", justifyContent: "space-between", boxShadow: "0 2px 4px rgba(0,0,0,0.02)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "#e2e8f0"; }} onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"; e.currentTarget.style.borderColor = "#f1f5f9"; }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#5A72F6" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg></div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#5A72F6" }} /><span style={{ fontSize: "11px", fontWeight: "700", color: "#5A72F6", textTransform: "uppercase", letterSpacing: "0.05em" }}>Active</span></div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "#10b981" : "#5A72F6" }} />
+                          <span style={{ fontSize: "11px", fontWeight: "700", color: path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "#10b981" : "#5A72F6", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            {path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "Completed" : "Active"}
+                          </span>
+                        </div>
+                        <button
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            margin: 0,
+                            cursor: 'pointer',
+                            color: '#5A72F6',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s',
+                          }}
+                          title="Check Map"
+                          onClick={e => { e.stopPropagation(); loadSpecificPath(path.id); setView('map'); }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4l3 3" />
+                          </svg>
+                        </button>
                       </div>
                       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", marginTop: "4px" }}>
                         <h3 style={{ margin: "0", fontSize: "15px", fontWeight: "700", color: "#1e293b", lineHeight: "1.4", display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical", overflow: "hidden" }}>{path.overall_target}</h3>
@@ -793,15 +829,38 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                       onMouseOut={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)"; e.currentTarget.style.borderColor = "#f1f5f9"; }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#5A72F6" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#5A72F6" }} />
-                          <span style={{ fontSize: "11px", fontWeight: "700", color: "#5A72F6", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Active
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "#10b981" : "#5A72F6" }} />
+                          <span style={{ fontSize: "11px", fontWeight: "700", color: path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "#10b981" : "#5A72F6", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            {path.total_modules > 0 && (path.completed_modules / path.total_modules) * 100 === 100 ? "Completed" : "Active"}
                           </span>
                         </div>
+                        <button
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            margin: 0,
+                            cursor: 'pointer',
+                            color: '#5A72F6',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s',
+                          }}
+                          title="Check Map"
+                          onClick={e => { e.stopPropagation(); loadSpecificPath(path.id); setView('map'); }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4l3 3" />
+                          </svg>
+                        </button>
                       </div>
 
                       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", marginTop: "4px" }}>
@@ -1005,9 +1064,11 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                         )}
 
                         {isLocked && (
-                          <g transform={`translate(${node.x - 7}, ${node.y - 9})`} opacity="0.4">
-                            <rect x="0" y="7" width="14" height="11" rx="2" fill="#94a3b8" />
-                            <path d="M3 7V4a4 4 0 0 1 8 0v3" fill="none" stroke="#94a3b8" strokeWidth="2" />
+                          <g transform={`translate(${node.x - 10}, ${node.y - 10})`} opacity="0.6">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="4" y="10" width="16" height="10" rx="1" />
+                              <path d="M8 10V6a4 4 0 0 1 8 0v4" />
+                            </svg>
                           </g>
                         )}
 
@@ -1211,7 +1272,12 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                             color: "#fff",
                             flexShrink: 0
                           }}>
-                            {isCompleted ? "✓" : isLocked ? "🔒" : isSelected ? "▶" : ""}
+                            {isCompleted ? "✓" : isLocked ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="4" y="10" width="16" height="10" rx="1" />
+                                <path d="M8 10V6a4 4 0 0 1 8 0v4" />
+                              </svg>
+                            ) : isSelected ? "▶" : ""}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: "13px", fontWeight: isSelected ? "700" : "600", color: isLocked ? "#94a3b8" : isSelected ? "#1e293b" : "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1257,40 +1323,6 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                         {selectedModule?.instructional_goal || "Explore the core concepts and practical applications of this topic with interactive AI guidance."}
                       </p>
                     </div>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                      <button style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
-                        background: "#fff",
-                        color: "#475569",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        cursor: "pointer"
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
-                        Summary
-                      </button>
-                      <button style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: "#5A72F6",
-                        color: "#fff",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        cursor: "pointer"
-                      }}>
-                        <span style={{ fontSize: "14px" }}>🧬</span>
-                        Deep-Dive
-                      </button>
-                    </div>
                   </div>
                 </div>
 
@@ -1335,7 +1367,6 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           lineHeight: "1.6",
                           display: "inline-block",
                           textAlign: "left",
-                          whiteSpace: "pre-wrap",
                           boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                         }}>
                           {msg.content}
@@ -1349,6 +1380,48 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                       </div>
                     </div>
                   ))}
+                  {isStreaming && (
+                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                      <div style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "50%",
+                        background: "#f1f5f9",
+                        color: "#5A72F6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="8" width="6" height="7" rx="1.5" />
+                          <rect x="15" y="2" width="6" height="7" rx="1.5" />
+                          <rect x="15" y="15" width="6" height="7" rx="1.5" />
+                          <path d="M9 11.5h3.5v-6h2.5" />
+                          <path d="M12.5 11.5v7h2.5" />
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1, maxWidth: "80%", textAlign: "left" }}>
+                        <div style={{
+                          background: "#f1f5f9",
+                          color: "#334155",
+                          padding: "10px 16px",
+                          borderRadius: "0 18px 18px 18px",
+                          fontSize: "14.5px",
+                          lineHeight: "1.6",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                          minHeight: "40px",
+                          gap: "10px",
+                          width: "fit-content"
+                        }}>
+                          <div className="spinner" style={{ width: "16px", height: "16px", margin: 0 }} />
+                          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Tutoring...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div ref={chatEndRef} />
                 </div>
 

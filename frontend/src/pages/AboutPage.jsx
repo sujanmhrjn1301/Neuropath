@@ -1,19 +1,18 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/about.css";
 import { LogoIcon, MenuIcon } from "../components/Icons";
 
-const NAV_ITEMS = ["How it works", "Features", "Pricing", "About"];
-const NAV_ROUTES = { "How it works": "/how-it-works", "Features": "/features", "Pricing": "/pricing", "About": "/about" };
+const NAV_ITEMS = ["How it works", "Features", "Pricing", "About"]; 
 
-export default function AboutPage() {
-  const navigate = useNavigate();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
+export default function AboutPage({ onBackToLanding, onGoToHowItWorks, onGoToFeatures, onGoToPricing, onTryNeuroPath }) {
   return (
     <div className="page-enter">
+      {/* NAV (shared marketing nav with About highlighted) */}
       <nav className="np-nav">
-        <div className="np-logo" onClick={() => navigate("/landing")} style={{ cursor: "pointer" }}>
+        <div
+          className="np-logo"
+          onClick={onBackToLanding}
+          style={{ cursor: "pointer" }}
+        >
           <div className="np-logo-icon"><LogoIcon /></div>
           <span className="np-logo-text">NeuroPath</span>
         </div>
@@ -23,7 +22,13 @@ export default function AboutPage() {
               <a
                 href="#"
                 className={label === "About" ? "np-nav-link-active" : undefined}
-                onClick={e => { e.preventDefault(); navigate(NAV_ROUTES[label]); }}
+                onClick={e => {
+                  e.preventDefault();
+                  if (label === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+                  if (label === "Features" && onGoToFeatures) onGoToFeatures();
+                  if (label === "Pricing" && onGoToPricing) onGoToPricing();
+                  if (label !== "Pricing" && label !== "About" && label !== "Features" && label !== "How it works" && onBackToLanding) onBackToLanding();
+                }}
               >
                 {label}
               </a>
@@ -31,10 +36,21 @@ export default function AboutPage() {
           ))}
         </ul>
         <div className="np-nav-right">
-          <button className="btn-blue" onClick={() => navigate("/")}>Try NeuroPath</button>
+          <button
+            className="btn-blue"
+            onClick={() => {
+              if (onTryNeuroPath) onTryNeuroPath();
+            }}
+          >
+            Try NeuroPath
+          </button>
           <button
             className="np-mobile-menu-toggle"
-            onClick={() => setMobileNavOpen(o => !o)}
+            onClick={() => {
+              const menu = document.querySelector(".np-mobile-menu");
+              if (!menu) return;
+              menu.classList.toggle("open");
+            }}
             aria-label="Toggle navigation menu"
           >
             <MenuIcon />
@@ -42,19 +58,29 @@ export default function AboutPage() {
         </div>
       </nav>
 
-      <div className={`np-mobile-menu${mobileNavOpen ? " open" : ""}`}>
+      {/* Simple mobile menu (reuses same labels) */}
+      <div className="np-mobile-menu">
         {NAV_ITEMS.map(label => (
           <a
             key={label}
             href="#"
             className={label === "About" ? "np-nav-link-active" : undefined}
-            onClick={e => { e.preventDefault(); setMobileNavOpen(false); navigate(NAV_ROUTES[label]); }}
+            onClick={e => {
+              e.preventDefault();
+              const menu = document.querySelector(".np-mobile-menu");
+              if (menu) menu.classList.remove("open");
+              if (label === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+              if (label === "Features" && onGoToFeatures) onGoToFeatures();
+              if (label === "Pricing" && onGoToPricing) onGoToPricing();
+              if (label !== "Pricing" && label !== "About" && label !== "Features" && label !== "How it works" && onBackToLanding) onBackToLanding();
+            }}
           >
             {label}
           </a>
         ))}
       </div>
 
+      {/* MAIN CONTENT */}
       <main className="about-wrap">
         <div className="about-inner fu d2">
           <div className="fu d1">

@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/features.css";
 import { LogoIcon, MenuIcon } from "../components/Icons";
 
-const NAV_ITEMS = ["How it works", "Features", "Pricing", "About"];
-const NAV_ROUTES = { "How it works": "/how-it-works", "Features": "/features", "Pricing": "/pricing", "About": "/about" };
+const NAV_ITEMS = ["How it works", "Features", "Pricing", "About"]; 
 
-export default function FeaturesPage() {
-  const navigate = useNavigate();
+export default function FeaturesPage({ onBackToLanding, onGoToHowItWorks, onGoToPricing, onGoToAbout, onTryNeuroPath }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="page-enter">
+      {/* NAV (shared marketing nav with Features highlighted) */}
       <nav className="np-nav">
-        <div className="np-logo" onClick={() => navigate("/landing")} style={{ cursor: "pointer" }}>
+        <div
+          className="np-logo"
+          onClick={onBackToLanding}
+          style={{ cursor: "pointer" }}
+        >
           <div className="np-logo-icon"><LogoIcon /></div>
           <span className="np-logo-text">NeuroPath</span>
         </div>
@@ -23,7 +25,13 @@ export default function FeaturesPage() {
               <a
                 href="#"
                 className={label === "Features" ? "np-nav-link-active" : undefined}
-                onClick={e => { e.preventDefault(); navigate(NAV_ROUTES[label]); }}
+                onClick={e => {
+                  e.preventDefault();
+                  if (label === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+                  if (label === "Pricing" && onGoToPricing) onGoToPricing();
+                  if (label === "About" && onGoToAbout) onGoToAbout();
+                  if (label !== "Pricing" && label !== "About" && label !== "Features" && label !== "How it works" && onBackToLanding) onBackToLanding();
+                }}
               >
                 {label}
               </a>
@@ -31,10 +39,17 @@ export default function FeaturesPage() {
           ))}
         </ul>
         <div className="np-nav-right">
-          <button className="btn-blue" onClick={() => navigate("/")}>Try NeuroPath</button>
+          <button
+            className="btn-blue"
+            onClick={() => {
+              if (onTryNeuroPath) onTryNeuroPath();
+            }}
+          >
+            Try NeuroPath
+          </button>
           <button
             className="np-mobile-menu-toggle"
-            onClick={() => setMobileNavOpen(o => !o)}
+            onClick={() => setMobileNavOpen(open => !open)}
             aria-label="Toggle navigation menu"
           >
             <MenuIcon />
@@ -42,19 +57,28 @@ export default function FeaturesPage() {
         </div>
       </nav>
 
+      {/* Mobile slide-out nav */}
       <div className={`np-mobile-menu${mobileNavOpen ? " open" : ""}`}>
         {NAV_ITEMS.map(label => (
           <a
             key={label}
             href="#"
             className={label === "Features" ? "np-nav-link-active" : undefined}
-            onClick={e => { e.preventDefault(); setMobileNavOpen(false); navigate(NAV_ROUTES[label]); }}
+            onClick={e => {
+              e.preventDefault();
+              setMobileNavOpen(false);
+              if (label === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+              if (label === "Pricing" && onGoToPricing) onGoToPricing();
+              if (label === "About" && onGoToAbout) onGoToAbout();
+              if (label !== "Pricing" && label !== "About" && label !== "Features" && label !== "How it works" && onBackToLanding) onBackToLanding();
+            }}
           >
             {label}
           </a>
         ))}
       </div>
 
+      {/* MAIN CONTENT */}
       <main className="features-wrap">
         <div className="features-inner fu d2">
           <header className="fu d1">

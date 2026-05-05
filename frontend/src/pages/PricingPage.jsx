@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/pages.css";
 import { LogoIcon, MenuIcon } from "../components/Icons";
 
-export default function PricingPage() {
-  const navigate = useNavigate();
-  const [billing, setBilling] = useState("monthly");
+export default function PricingPage({ onBack, onSelectPlan, onGoToHowItWorks, onGoToFeatures, onGoToAbout }) {
+  const [billing, setBilling] = useState("monthly"); // "monthly" | "yearly"
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const navItems = ["How it works", "Features", "Pricing", "About"];
-  const navRoutes = { "How it works": "/how-it-works", "Features": "/features", "Pricing": "/pricing", "About": "/about" };
+  const navItems = ["How it works", "Features", "Pricing", "About"]; 
 
   const plans = [
     {
@@ -60,8 +57,9 @@ export default function PricingPage() {
 
   return (
     <div className="page-enter">
+      {/* NAV (keeps marketing tabs visible, highlights Pricing) */}
       <nav className="np-nav">
-        <div className="np-logo" onClick={() => navigate("/landing")} style={{ cursor: "pointer" }}>
+        <div className="np-logo" onClick={onBack} style={{ cursor: "pointer" }}>
           <div className="np-logo-icon"><LogoIcon /></div>
           <span className="np-logo-text">NeuroPath</span>
         </div>
@@ -71,7 +69,14 @@ export default function PricingPage() {
               <a
                 href="#"
                 className={l === "Pricing" ? "np-nav-link-active" : undefined}
-                onClick={e => { e.preventDefault(); navigate(navRoutes[l]); }}
+                onClick={e => {
+                  e.preventDefault();
+                  if (l === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+                  if (l === "Features" && onGoToFeatures) onGoToFeatures();
+                  if (l === "About" && onGoToAbout) onGoToAbout();
+                  // Other non-pricing tabs go back to landing page
+                  if (l !== "Pricing" && l !== "About" && l !== "Features" && l !== "How it works" && onBack) onBack();
+                }}
               >
                 {l}
               </a>
@@ -79,10 +84,10 @@ export default function PricingPage() {
           ))}
         </ul>
         <div className="np-nav-right">
-          <button className="btn-blue" onClick={() => navigate("/")}>Get Started</button>
+          <button className="btn-blue" onClick={() => onSelectPlan && onSelectPlan()}>Get Started</button>
           <button
             className="np-mobile-menu-toggle"
-            onClick={() => setMobileNavOpen(o => !o)}
+            onClick={() => setMobileNavOpen(open => !open)}
             aria-label="Toggle navigation menu"
           >
             <MenuIcon />
@@ -90,19 +95,28 @@ export default function PricingPage() {
         </div>
       </nav>
 
+      {/* Mobile slide-out nav */}
       <div className={`np-mobile-menu${mobileNavOpen ? " open" : ""}`}>
         {navItems.map(l => (
           <a
             key={l}
             href="#"
             className={l === "Pricing" ? "np-nav-link-active" : undefined}
-            onClick={e => { e.preventDefault(); setMobileNavOpen(false); navigate(navRoutes[l]); }}
+            onClick={e => {
+              e.preventDefault();
+              setMobileNavOpen(false);
+              if (l === "How it works" && onGoToHowItWorks) onGoToHowItWorks();
+              if (l === "Features" && onGoToFeatures) onGoToFeatures();
+              if (l === "About" && onGoToAbout) onGoToAbout();
+              if (l !== "Pricing" && l !== "About" && l !== "Features" && l !== "How it works" && onBack) onBack();
+            }}
           >
             {l}
           </a>
         ))}
       </div>
 
+      {/* MAIN CONTENT */}
       <div className="pricing-wrap">
         <div className="pricing-header">
           <h1 className="pricing-title">Choose your NeuroPath plan</h1>
@@ -154,7 +168,7 @@ export default function PricingPage() {
                   <button
                     className="btn-plan"
                     type="button"
-                    onClick={() => navigate("/")}
+                    onClick={() => onSelectPlan && onSelectPlan(plan.id)}
                   >
                     Choose {plan.name}
                   </button>

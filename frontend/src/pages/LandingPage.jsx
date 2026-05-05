@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { LogoIcon, MenuIcon, SearchIcon, KnowledgeGraph } from "../components/Icons";
 
-export default function LandingPage() {
-  const navigate = useNavigate();
+export default function LandingPage({ onGetStarted, onLogin, onPricing, onFeatures, onHowItWorks, onAbout }) {
   const [searchVal, setSearchVal] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleGenerate = () => {
-    navigate("/");
+    if (searchVal.trim()) onGetStarted(searchVal.trim());
+    else onGetStarted("");
   };
 
   const cards = [
@@ -46,8 +45,7 @@ export default function LandingPage() {
     },
   ];
 
-  const navItems = ["How it works", "Features", "Pricing", "About"];
-  const navRoutes = { "How it works": "/how-it-works", "Features": "/features", "Pricing": "/pricing", "About": "/about" };
+  const navItems = ["How it works", "Features", "Pricing", "About"]; 
 
   return (
     <div className="page-enter">
@@ -64,7 +62,10 @@ export default function LandingPage() {
                 href="#"
                 onClick={e => {
                   e.preventDefault();
-                  navigate(navRoutes[l]);
+                  if (l === "How it works" && onHowItWorks) onHowItWorks();
+                  if (l === "Features" && onFeatures) onFeatures();
+                  if (l === "Pricing" && onPricing) onPricing();
+                  if (l === "About" && onAbout) onAbout();
                 }}
               >
                 {l}
@@ -73,8 +74,13 @@ export default function LandingPage() {
           ))}
         </ul>
         <div className="np-nav-right">
-          <button className="btn-ghost" onClick={() => navigate("/")}>Log In</button>
-          <button className="btn-blue" onClick={() => navigate("/")}>Try NeuroPath</button>
+          <button
+            className="btn-ghost"
+            onClick={() => onLogin && onLogin()}
+          >
+            Log In
+          </button>
+          <button className="btn-blue" onClick={() => onGetStarted("")}>Try NeuroPath</button>
           <button
             className="np-mobile-menu-toggle"
             onClick={() => setMobileNavOpen(open => !open)}
@@ -94,7 +100,10 @@ export default function LandingPage() {
             onClick={e => {
               e.preventDefault();
               setMobileNavOpen(false);
-              navigate(navRoutes[l]);
+              if (l === "How it works" && onHowItWorks) onHowItWorks();
+              if (l === "Features" && onFeatures) onFeatures();
+              if (l === "Pricing" && onPricing) onPricing();
+              if (l === "About" && onAbout) onAbout();
             }}
           >
             {l}
@@ -160,8 +169,8 @@ export default function LandingPage() {
         <h2 className="cta-title">Ready to visualize your knowledge?</h2>
         <p className="cta-sub">Join thousands of learners mapping their way to mastery. Start exploring any topic for free today.</p>
         <div className="cta-btns">
-          <button className="btn-lg btn-lg-blue" onClick={() => navigate("/")}>Start Learning For Free</button>
-          <button className="btn-lg btn-lg-outline" onClick={() => navigate("/")}>
+          <button className="btn-lg btn-lg-blue" onClick={() => onGetStarted("")}>Start Learning For Free</button>
+          <button className="btn-lg btn-lg-outline" onClick={() => onGetStarted("Machine Learning Fundamentals")}>
             View Demo Path
           </button>
         </div>

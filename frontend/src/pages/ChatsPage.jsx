@@ -168,7 +168,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
         height: "100%",
         background: "#fff",
         borderRight: "1px solid #f1f5f9",
-        display: "flex",
+        display: "none",
         flexDirection: "column",
         transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
         flexShrink: 0,
@@ -244,19 +244,41 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
       {/* ── MAIN CONTENT ── */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <header style={{ height: "72px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", borderBottom: "1px solid #f8fafc", flexShrink: 0 }}>
-          <h2 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1e293b" }}>
-            {phase === "input" ? "New Chat" : phase === "done" ? "Path Ready!" : "Assessing Your Knowledge"}
-          </h2>
+        <header style={{ height: "72px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", background: "#fff", borderBottom: "1px solid #e2e8f0", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "40px", height: "40px", background: "#5A72F6", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, boxShadow: "0 2px 8px rgba(90, 114, 246, 0.2)" }}>
+              <LogoIcon />
+            </div>
+            <span style={{ fontSize: "18px", fontWeight: "800", color: "#1e293b", letterSpacing: "-0.02em" }}>NeuroPath</span>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {phase !== "input" && (
-              <button onClick={() => setIsDebugMode(!isDebugMode)} style={{ background: isDebugMode ? "#ef4444" : "#f8fafc", color: isDebugMode ? "#fff" : "#64748b", border: `1px solid ${isDebugMode ? "#ef4444" : "#e2e8f0"}`, borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
-                {isDebugMode ? "⚡ DEBUG ON" : "🪲 DEBUG"}
-              </button>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "600", color: "#1e293b" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>👤</div>
-              {user?.name || "User"}
+            <button
+              onClick={() => onFinish(null)}
+              style={{
+                background: "#fff",
+                color: "#5A72F6",
+                border: "1.5px solid #5A72F6",
+                borderRadius: "8px",
+                padding: "10px 16px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.boxShadow = "0 0 12px rgba(90, 114, 246, 0.15)"; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "none"; }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <path d="M9 12h6M12 9v6"></path>
+              </svg>
+              Dashboard
+            </button>
+            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#5A72F6", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, fontWeight: "600", fontSize: "14px", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(90, 114, 246, 0.2)" }} title={user?.name || "User"}>
+              {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
           </div>
         </header>
@@ -278,30 +300,6 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                   onFocus={e => e.target.style.borderColor = "#5A72F6"}
                   onBlur={e => e.target.style.borderColor = "#e2e8f0"}
                 />
-                <div style={{ display: "flex", gap: "24px", marginTop: "20px", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: "160px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>Difficulty Level</div>
-                    <div style={{ display: "flex" }}>
-                      {["Beginner", "Intermediate", "Expert"].map((d, i) => (
-                        <button key={d} type="button" onClick={() => setDifficulty(d)}
-                          style={{ flex: 1, padding: "10px 0", border: "1.5px solid #e2e8f0", background: difficulty === d ? "#eff6ff" : "#fff", color: difficulty === d ? "#5A72F6" : "#64748b", fontSize: "13px", fontWeight: difficulty === d ? "600" : "400", cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
-                            borderRadius: i === 0 ? "8px 0 0 8px" : i === 2 ? "0 8px 8px 0" : "0", marginRight: i < 2 ? "-1px" : "0", zIndex: difficulty === d ? 1 : 0, position: "relative" }}>
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: "160px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>Daily Commitment</div>
-                    <select value={commitment} onChange={e => setCommitment(e.target.value)}
-                      style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", color: "#1e293b", outline: "none", background: "#fff", fontFamily: "inherit" }}>
-                      <option>15 - 30 mins (Light)</option>
-                      <option>30 - 60 mins (Steady)</option>
-                      <option>1 - 2 hrs (Intensive)</option>
-                      <option>2+ hrs (Full-time)</option>
-                    </select>
-                  </div>
-                </div>
                 <button type="submit" disabled={!inputGoal.trim()}
                   style={{ width: "100%", marginTop: "24px", padding: "14px", background: inputGoal.trim() ? "#5A72F6" : "#e2e8f0", color: inputGoal.trim() ? "#fff" : "#94a3b8", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: inputGoal.trim() ? "pointer" : "not-allowed", transition: "all 0.2s", fontFamily: "inherit" }}>
                   ✦ Generate My Path
@@ -349,19 +347,44 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
 
             {/* Input bar */}
             <div style={{ padding: "0 40px 32px", flexShrink: 0 }}>
-              <div style={{ maxWidth: "780px", margin: "0 auto" }}>
+              <div style={{ maxWidth: "780px", margin: "0 auto", display: "flex", gap: "12px", alignItems: "center" }}>
                 {phase !== "done" ? (
-                  <form onSubmit={handleSend} style={{ position: "relative", display: "flex" }}>
-                    <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}
-                      placeholder="Type your response..." disabled={chatDisabled}
-                      style={{ flex: 1, padding: "16px 60px 16px 22px", borderRadius: "14px", border: "1px solid #e2e8f0", fontSize: "15px", outline: "none", boxShadow: "0 4px 16px rgba(0,0,0,0.03)", background: "#fff", fontFamily: "inherit", transition: "all 0.2s" }}
-                      onFocus={e => { e.target.style.borderColor = "#5A72F6"; e.target.style.boxShadow = "0 4px 20px rgba(90,114,246,0.08)"; }}
-                      onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }} />
-                    <button type="submit" disabled={chatDisabled || !inputValue.trim()}
-                      style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: (chatDisabled || !inputValue.trim()) ? "#f1f5f9" : "#5A72F6", color: (chatDisabled || !inputValue.trim()) ? "#94a3b8" : "#fff", border: "none", borderRadius: "10px", width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", cursor: (chatDisabled || !inputValue.trim()) ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                  <>
+                    <button
+                      onClick={() => setIsDebugMode(!isDebugMode)}
+                      style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "14px",
+                        padding: "12px 16px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        color: isDebugMode ? "#5A72F6" : "#94a3b8",
+                        fontSize: "18px",
+                        fontWeight: "600",
+                        flexShrink: 0
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#d1d5db"; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+                      title={isDebugMode ? "Debug Mode ON" : "Enable Debug Mode"}
+                    >
+                      &lt;/&gt;
                     </button>
-                  </form>
+                    <form onSubmit={handleSend} style={{ position: "relative", display: "flex", flex: 1 }}>
+                      <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}
+                        placeholder="Type your response..." disabled={chatDisabled}
+                        style={{ flex: 1, padding: "16px 60px 16px 22px", borderRadius: "14px", border: "1px solid #e2e8f0", fontSize: "15px", outline: "none", boxShadow: "0 4px 16px rgba(0,0,0,0.03)", background: "#fff", fontFamily: "inherit", transition: "all 0.2s" }}
+                        onFocus={e => { e.target.style.borderColor = "#5A72F6"; e.target.style.boxShadow = "0 4px 20px rgba(90,114,246,0.08)"; }}
+                        onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }} />
+                      <button type="submit" disabled={chatDisabled || !inputValue.trim()}
+                        style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: (chatDisabled || !inputValue.trim()) ? "#f1f5f9" : "#5A72F6", color: (chatDisabled || !inputValue.trim()) ? "#94a3b8" : "#fff", border: "none", borderRadius: "10px", width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", cursor: (chatDisabled || !inputValue.trim()) ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                      </button>
+                    </form>
+                  </>
                 ) : (
                   <div style={{ textAlign: "center" }}>
                     <button onClick={() => onFinish(generatedPathId)} style={{ padding: "14px 40px", background: "#5A72F6", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer", boxShadow: "0 4px 16px rgba(90,114,246,0.3)", fontFamily: "inherit" }}>

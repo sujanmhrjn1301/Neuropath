@@ -154,11 +154,12 @@ export default function App() {
         />
       )}
       {page === "dashboard" && (
-        <DashboardPage 
-          pathId={activePathId} 
-          onLogout={goToLogin} 
-          onNewPath={() => goToChats()} 
+        <DashboardPage
+          pathId={activePathId}
+          onLogout={goToLogin}
+          onNewPath={() => goToChats()}
           onGeneratePath={(title) => goToChats(title, "Intermediate", "30 - 60 mins (Steady)")}
+          onUpdateKnowledge={() => goToChats()}
           user={user}
         />
       )}
