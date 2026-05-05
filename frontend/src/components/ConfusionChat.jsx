@@ -1,17 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import TextSelectionWrapper from './TextSelectionWrapper';
+import '../styles/confusion.css';
 
-const ConfusionChat = ({ token }) => {
-    const { nodeId } = useParams();
-    const navigate = useNavigate();
-
+const ConfusionChat = forwardRef(({ token, nodeId, onBack, onResolved }, ref) => {
     const [metadata, setMetadata] = useState(null);
     const [messages, setMessages] = useState([]);
-    const [currentInput, setCurrentInput] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [provider, setProvider] = useState('deepseek');
@@ -21,14 +17,30 @@ const ConfusionChat = ({ token }) => {
     
     const messagesEndRef = useRef(null);
 
+    // Notify parent when resolution status changes
+    useEffect(() => {
+        if (onResolved) onResolved(isResolved);
+    }, [isResolved, onResolved]);
+
+    // Expose handleSend to parent via ref
+    useImperativeHandle(ref, () => ({
+        handleExternalSend: (text) => {
+            if (isResolved) return;
+            handleSend(null, text);
+        },
+        isResolved
+    }));
+
     // Scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    }, [messages, isStreaming]);
 
     // Hydration
     useEffect(() => {
         let isMounted = true;
+        if (!nodeId) return;
+
         setIsLoading(true);
         setMessages([]);
         setIsResolved(false);
@@ -56,11 +68,17 @@ const ConfusionChat = ({ token }) => {
                 const history = await chatRes.json();
                 
                 if (!isMounted) return;
-                if (history.length > 0) {
-                    setMessages(history.map(msg => ({ role: msg.role, content: msg.content, id: msg.id })));
+                
+                if (history && history.length > 0) {
+                    // We have history, just load it and stop
+                    setMessages(history.map(msg => ({ 
+                        role: msg.role, 
+                        content: msg.content, 
+                        id: msg.id 
+                    })));
                     setIsLoading(false);
                 } else {
-                    // Trigger INIT
+                    // Brand new side-quest, trigger the welcome
                     setIsLoading(false);
                     triggerInit();
                 }
@@ -98,7 +116,7 @@ const ConfusionChat = ({ token }) => {
         return () => {
             isMounted = false;
         };
-    }, [nodeId, token]); // Re-run when nodeId changes (e.g., navigating to nested side-quest)
+    }, [nodeId, token]);
 
     const consumeStream = async (response) => {
         const reader = response.body.getReader();
@@ -125,6 +143,10 @@ const ConfusionChat = ({ token }) => {
 
                         if (jsonData.status === 'resolved') {
                             setIsResolved(true);
+                            // Give user time to read the final message before auto-closing
+                            setTimeout(() => {
+                                if (onBack) onBack();
+                            }, 2500);
                             return;
                         }
 
@@ -167,13 +189,12 @@ const ConfusionChat = ({ token }) => {
         }
     };
 
-    const handleSend = async (e) => {
+    const handleSend = async (e, externalText = null) => {
         if (e) e.preventDefault();
-        const inputText = currentInput.trim();
+        const inputText = (externalText !== null ? externalText : '').trim();
         if (!inputText || isStreaming || isResolved) return;
 
         setMessages(prev => [...prev, { role: 'user', content: inputText, id: Date.now() }, { role: 'assistant', content: '', id: Date.now() + 1 }]);
-        setCurrentInput('');
         setIsStreaming(true);
 
         try {
@@ -195,180 +216,56 @@ const ConfusionChat = ({ token }) => {
         }
     };
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
-
-    const handleReturn = () => {
-        if (!metadata) return;
-        if (metadata.parent_confusion_id) {
-            navigate(`/confusion/${metadata.parent_confusion_id}`);
-        } else {
-            navigate(`/module/${metadata.root_module_id}/chat`);
-        }
-    };
-
     return (
-        <div className="assessment-page">
-            {/* ── Top Navbar ── */}
-            <div className="assessment-navbar">
-                <button
-                    className="assessment-back-link"
-                    onClick={() => navigate(-1)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                    ← Back
+        <div className="confusion-container">
+            {/* Header */}
+            <div className="confusion-header">
+                <button className="confusion-back-btn" onClick={onBack} title="Return to Lesson">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
                 </button>
-                <h1 className="assessment-title">
-                    {title ? `Side-Quest: ${title}` : 'Loading Side-Quest...'}
-                </h1>
-
-                <div className="debug-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', marginRight: '16px' }}>
-                    <label htmlFor="debug-mode-toggle" style={{ fontSize: '0.85rem', color: '#ffb86c', fontWeight: 'bold' }}>
-                        🛠 God Mode
-                    </label>
-                    <input
-                        type="checkbox"
-                        id="debug-mode-toggle"
-                        checked={debugMode}
-                        onChange={(e) => setDebugMode(e.target.checked)}
-                    />
-                </div>
-
-                <div className="provider-select-wrapper">
-                    <label htmlFor="module-provider-select">AI Provider</label>
-                    <select
-                        id="module-provider-select"
-                        value={provider}
-                        onChange={(e) => setProvider(e.target.value)}
-                        className="custom-select provider-select"
-                    >
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="openrouter">OpenRouter</option>
-                    </select>
+                <div className="confusion-title-area">
+                    <div className="confusion-subtitle">Clarification Side-Quest</div>
+                    <h2 className="confusion-title">{title || 'Loading Deep Dive...'}</h2>
                 </div>
             </div>
 
-            {/* ── Chat Area ── */}
-            <div className="assessment-content">
-                <div className="chat-interface">
-                    <TextSelectionWrapper 
-                        disabled={isLoading} 
-                        rootModuleId={metadata?.root_module_id}
-                        parentConfusionId={nodeId}
-                        token={token}
-                    >
-                        <div className="chat-messages-area">
-
-                        {isLoading ? (
-                            <div className="empty-state">
-                                <div className="path-spinner" style={{ margin: '0 auto' }} />
-                                <p style={{ marginTop: '1rem' }}>Loading side-quest...</p>
-                            </div>
-                        ) : messages.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-state-icon">❓</div>
-                                <h3>Side-Quest</h3>
-                                <p>Loading your clarification tutor...</p>
-                            </div>
-                        ) : (
-                            messages.map((msg, idx) => (
-                                <div key={msg.id || idx} data-message-id={msg.id} className={`message-row ${msg.role}`}>
-                                    <div className="message-avatar">
-                                        {msg.role === 'user' ? 'You' : 'AI'}
-                                    </div>
-                                    <div className="message-content">
-                                        {msg.role === 'assistant' ? (
-                                            <div className="message-markdown">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                                    {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
-                                                </ReactMarkdown>
-                                                {isStreaming && idx === messages.length - 1 && (
-                                                    <span className="typing-cursor">▋</span>
-                                                )}
-                                            </div>
-                                        ) : msg.role === 'system' ? (
-                                            <div className="message-text system-message" style={{ fontStyle: 'italic', color: '#89b4fa', textAlign: 'center', width: '100%' }}>
-                                                <ReactMarkdown 
-                                                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                                                    components={{
-                                                        a: ({node, ...props}) => {
-                                                            if (props.href && props.href.startsWith('/confusion/')) {
-                                                                return (
-                                                                    <Link 
-                                                                        to={props.href} 
-                                                                        className="side-quest-link"
-                                                                        style={{ color: '#89b4fa', textDecoration: 'none', borderBottom: '1px dashed #89b4fa', fontWeight: 'bold', paddingBottom: '2px', transition: 'all 0.2s' }}
-                                                                    >
-                                                                        {props.children}
-                                                                    </Link>
-                                                                );
-                                                            }
-                                                            return <a target="_blank" rel="noopener noreferrer" style={{ color: '#a6e3a1' }} {...props} />;
-                                                        }
-                                                    }}
-                                                >
-                                                    {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
-                                                </ReactMarkdown>
-                                            </div>
-                                        ) : (
-                                            <div className="message-text">{msg.content}</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-
-                        <div ref={messagesEndRef} />
-                        </div>
-                    </TextSelectionWrapper>
-
-                    {/* ── Input Area ── */}
-                    <div className="chat-input-area">
-                        {isResolved ? (
-                            <button 
-                                onClick={handleReturn}
-                                style={{ width: '100%', padding: '16px', backgroundColor: '#89b4fa', color: '#1e1e2e', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem' }}
-                            >
-                                {metadata?.parent_confusion_id ? 'Return to Previous Topic' : 'Return to Main Lesson'}
-                            </button>
-                        ) : (
-                            <form onSubmit={handleSend} className="chat-input-form">
-                                <textarea
-                                    value={currentInput}
-                                    onChange={(e) => setCurrentInput(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder={
-                                        isStreaming
-                                            ? 'Clarification Tutor is responding…'
-                                            : 'Ask for clarification... (Enter to send, Shift+Enter for new line)'
-                                    }
-                                    disabled={isStreaming || isLoading}
-                                    className="chat-input"
-                                    rows={3}
-                                    autoFocus
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={isStreaming || isLoading || !currentInput.trim()}
-                                    className="send-btn"
-                                >
-                                    {isStreaming ? (
-                                        <span className="spinner">⟳</span>
-                                    ) : (
-                                        <span>↑</span>
-                                    )}
-                                </button>
-                            </form>
-                        )}
+            {/* Messages Area */}
+            <div className="confusion-messages">
+                {isLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
+                        <div className="spinner" style={{ marginBottom: '12px' }} />
+                        <p>Opening side-quest portal...</p>
                     </div>
-                </div>
+                ) : (
+                    messages.map((msg, idx) => (
+                        <div key={msg.id || idx} className={`confusion-message-row ${msg.role}`}>
+                            <div className={`confusion-avatar ${msg.role === 'user' ? 'user' : 'ai'}`}>
+                                {msg.role === 'user' ? 'U' : 'AI'}
+                            </div>
+                            <div className="confusion-bubble">
+                                <div className="confusion-markdown">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                        {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
+                                    </ReactMarkdown>
+                                    {isStreaming && idx === messages.length - 1 && msg.role === 'assistant' && !msg.content && (
+                                        <div className="typing-dots">
+                                            <div className="typing-dot" />
+                                            <div className="typing-dot" />
+                                            <div className="typing-dot" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+                <div ref={messagesEndRef} />
             </div>
+            {/* Input Area Removed - Using Dashboard Input */}
         </div>
     );
-};
+});
 
 export default ConfusionChat;

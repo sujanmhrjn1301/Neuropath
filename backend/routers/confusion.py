@@ -1,6 +1,7 @@
 """
 Confusion Node Architecture — Spawn endpoint.
 POST /api/confusions/start
+GET  /api/confusions/unresolved/{module_id}
 GET  /api/confusions/{node_id}
 GET  /api/confusions/{node_id}/chat
 """
@@ -126,8 +127,41 @@ def spawn_confusion(
         current_depth=new_depth
     )
     db.add(node)
+    db.flush() 
+
+    # Insert a link in the main module chat history
+    if not request.parent_confusion_id:
+        placeholder = ModuleChatMessage(
+            module_id=request.root_module_id,
+            role="side_quest",
+            content=f"Side-quest was created [/confusion/{node.id}]",
+            confusion_node_id=node.id
+        )
+        db.add(placeholder)
+
     db.commit()
     db.refresh(node)
+    return node
+
+
+# ── GET /unresolved/{module_id} — check for active side-quest ─────────────
+# NOTE: This MUST be declared before /{node_id} to avoid FastAPI routing conflicts.
+
+@router.get("/unresolved/{module_id}", response_model=Optional[ConfusionNodeOut])
+def get_unresolved_confusion(
+    module_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Check if there's an active (unresolved) side-quest for this module.
+    Returns the node if found, else null. Used to block the main lesson chat.
+    """
+    node = db.query(ConfusionNode).filter(
+        ConfusionNode.root_module_id == module_id,
+        ConfusionNode.user_id == current_user.id,
+        ConfusionNode.status == "active"
+    ).first()
     return node
 
 

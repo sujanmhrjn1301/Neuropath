@@ -282,74 +282,75 @@ const ModuleChat = ({ token }) => {
             {/* ── Chat Area ── */}
             <div className="assessment-content">
                 <div className="chat-interface">
-                    <TextSelectionWrapper 
-                        disabled={isLoadingHistory} 
+                    <TextSelectionWrapper
+                        disabled={isLoadingHistory}
                         rootModuleId={moduleId}
                         parentConfusionId={null}
                         token={token}
+                        onConfusionStarted={(nodeId) => navigate(`/confusion/${nodeId}`)}
                     >
                         <div className="chat-messages-area">
 
-                        {isLoadingHistory ? (
-                            <div className="empty-state">
-                                <div className="path-spinner" style={{ margin: '0 auto' }} />
-                                <p style={{ marginTop: '1rem' }}>Loading your session…</p>
-                            </div>
-                        ) : messages.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-state-icon">🎓</div>
-                                <h3>Ready to Learn?</h3>
-                                <p>Send a message to your AI tutor to begin this module.</p>
-                            </div>
-                        ) : (
-                            messages.map((msg, idx) => (
-                                <div key={idx} data-message-id={msg.id} className={`message-row ${msg.role}`}>
-                                    <div className="message-avatar">
-                                        {msg.role === 'user' ? 'You' : 'AI'}
-                                    </div>
-                                    <div className="message-content">
-                                        {msg.role === 'assistant' ? (
-                                            <div className="message-markdown">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                                    {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
-                                                </ReactMarkdown>
-                                                {isStreaming && idx === messages.length - 1 && (
-                                                    <span className="typing-cursor">▋</span>
-                                                )}
-                                            </div>
-                                        ) : msg.role === 'system' ? (
-                                            <div className="message-text system-message" style={{ fontStyle: 'italic', color: '#89b4fa', textAlign: 'center', width: '100%' }}>
-                                                <ReactMarkdown 
-                                                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                                                    components={{
-                                                        a: ({node, ...props}) => {
-                                                            if (props.href && props.href.startsWith('/confusion/')) {
-                                                                return (
-                                                                    <Link 
-                                                                        to={props.href} 
-                                                                        className="side-quest-link"
-                                                                        style={{ color: '#89b4fa', textDecoration: 'none', borderBottom: '1px dashed #89b4fa', fontWeight: 'bold', paddingBottom: '2px', transition: 'all 0.2s' }}
-                                                                    >
-                                                                        {props.children}
-                                                                    </Link>
-                                                                );
-                                                            }
-                                                            return <a target="_blank" rel="noopener noreferrer" style={{ color: '#a6e3a1' }} {...props} />;
-                                                        }
-                                                    }}
-                                                >
-                                                    {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
-                                                </ReactMarkdown>
-                                            </div>
-                                        ) : (
-                                            <div className="message-text">{msg.content}</div>
-                                        )}
-                                    </div>
+                            {isLoadingHistory ? (
+                                <div className="empty-state">
+                                    <div className="path-spinner" style={{ margin: '0 auto' }} />
+                                    <p style={{ marginTop: '1rem' }}>Loading your session…</p>
                                 </div>
-                            ))
-                        )}
+                            ) : messages.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">🎓</div>
+                                    <h3>Ready to Learn?</h3>
+                                    <p>Send a message to your AI tutor to begin this module.</p>
+                                </div>
+                            ) : (
+                                messages.map((msg, idx) => (
+                                    <div key={idx} data-message-id={msg.id || idx} className={`message-row ${msg.role}`}>
+                                        <div className="message-avatar">
+                                            {msg.role === 'user' ? 'You' : 'AI'}
+                                        </div>
+                                        <div className="message-content">
+                                            {msg.role === 'assistant' ? (
+                                                <div className="message-markdown" style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                                        {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
+                                                    </ReactMarkdown>
+                                                    {isStreaming && idx === messages.length - 1 && (
+                                                        <span className="typing-cursor">▋</span>
+                                                    )}
+                                                </div>
+                                            ) : msg.role === 'system' ? (
+                                                <div className="message-text system-message" style={{ fontStyle: 'italic', color: '#89b4fa', textAlign: 'center', width: '100%' }}>
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                                                        components={{
+                                                            a: ({ node, ...props }) => {
+                                                                if (props.href && props.href.startsWith('/confusion/')) {
+                                                                    return (
+                                                                        <Link
+                                                                            to={props.href}
+                                                                            className="side-quest-link"
+                                                                            style={{ color: '#89b4fa', textDecoration: 'none', borderBottom: '1px dashed #89b4fa', fontWeight: 'bold', paddingBottom: '2px', transition: 'all 0.2s' }}
+                                                                        >
+                                                                            {props.children}
+                                                                        </Link>
+                                                                    );
+                                                                }
+                                                                return <a target="_blank" rel="noopener noreferrer" style={{ color: '#a6e3a1' }} {...props} />;
+                                                            }
+                                                        }}
+                                                    >
+                                                        {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
+                                                    </ReactMarkdown>
+                                                </div>
+                                            ) : (
+                                                <div className="message-text" style={{ userSelect: 'text', WebkitUserSelect: 'text' }}>{msg.content}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
 
-                        <div ref={messagesEndRef} />
+                            <div ref={messagesEndRef} />
                         </div>
                     </TextSelectionWrapper>
 

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { LogoIcon } from "../components/Icons";
+import TextSelectionWrapper from "../components/TextSelectionWrapper";
+import ConfusionChat from "../components/ConfusionChat";
 import "../styles/pages.css";
 
 // Format inline markdown (bold, inline code)
@@ -32,9 +34,9 @@ const formatInline = (text) => {
 
     // Check if this should be bold or code
     const isBold = combined.substring(0, combined.indexOf(fragment)).match(/__BOLD_START__/g)?.length >
-                   combined.substring(0, combined.indexOf(fragment)).match(/__BOLD_END__/g)?.length;
+      combined.substring(0, combined.indexOf(fragment)).match(/__BOLD_END__/g)?.length;
     const isCode = combined.substring(0, combined.indexOf(fragment)).match(/__CODE_START__/g)?.length >
-                   combined.substring(0, combined.indexOf(fragment)).match(/__CODE_END__/g)?.length;
+      combined.substring(0, combined.indexOf(fragment)).match(/__CODE_END__/g)?.length;
 
     if (isBold) {
       return <strong key={idx}>{fragment}</strong>;
@@ -111,7 +113,11 @@ const renderMessage = (content) => {
   return parts;
 };
 
-export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user }) {
+export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user, goToConfusion, isDashboardActive }) {
+  const [activeConfusionId, setActiveConfusionId] = useState(null);
+  const [activeConfusion, setActiveConfusion] = useState(null);
+  const [isConfusionResolved, setIsConfusionResolved] = useState(false);
+  const [expandedConfusions, setExpandedConfusions] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [allPaths, setAllPaths] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
@@ -186,6 +192,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const [chatInput, setChatInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const chatEndRef = useRef(null);
+  const confusionChatRef = useRef(null);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -193,12 +200,41 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
   useEffect(() => {
     if (selectedModule) {
+      setChatMessages([]); // Clear previous messages instantly for a clean transition
       fetchChatHistory(selectedModule.id);
+      checkUnresolvedConfusion(selectedModule.id);
       if (currentPath) {
         localStorage.setItem(`lastModule_${currentPath.id}`, selectedModule.id);
       }
     }
-  }, [selectedModule, currentPath]);
+  }, [selectedModule?.id, currentPath?.id]); // Use IDs to avoid redundant triggers
+
+  useEffect(() => {
+    // Reset resolved state when switching side-quests or closing them
+    if (!activeConfusionId) {
+      setIsConfusionResolved(false);
+    }
+  }, [activeConfusionId]);
+
+  useEffect(() => {
+    if (isDashboardActive && selectedModule) {
+      checkUnresolvedConfusion(selectedModule.id);
+    }
+  }, [isDashboardActive, selectedModule]);
+
+  const checkUnresolvedConfusion = async (moduleId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://127.0.0.1:8000/api/confusions/unresolved/${moduleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setActiveConfusion(data || null);
+    } catch (err) {
+      console.error("Failed to check side-quest status", err);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -244,6 +280,12 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const handleSendMessage = async (textOverride, isSilentInit = false) => {
     const text = textOverride || chatInput;
     if (!text.trim() || isStreaming) return;
+
+    if (activeConfusionId && confusionChatRef.current && !isSilentInit) {
+      confusionChatRef.current.handleExternalSend(text);
+      setChatInput("");
+      return;
+    }
 
     if (!isSilentInit) {
       setChatMessages(prev => [...prev, { role: "user", content: text }]);
@@ -300,7 +342,13 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
               }
 
               if (data.status === "complete") {
-                setTimeout(() => loadSpecificPath(currentPath.id), 1000);
+                const pathIdToRefresh = currentPath?.id || selectedModule?.learning_path_id || localStorage.getItem("lastReadPathId");
+                if (pathIdToRefresh) {
+                  setTimeout(() => {
+                    loadSpecificPath(pathIdToRefresh, null, true); // stayOnCurrentView = true
+                    fetchAllPaths(); // Sync the global list
+                  }, 1000);
+                }
               }
             } catch (e) {
               console.error("SSE Parse Error", e);
@@ -379,34 +427,52 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
     }
   };
 
-  const loadSpecificPath = async (id, targetModuleId = null) => {
-    setLoading(true);
+  const loadSpecificPath = async (id, targetModuleId = null, stayOnCurrentView = false) => {
+    if (!stayOnCurrentView) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`http://127.0.0.1:8000/api/learning-paths/${id}/graph`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) throw new Error("Failed to load graph");
       const data = await res.json();
+      
+      // Safety check: Don't set currentPath if modules are missing
+      if (!data.modules || data.modules.length === 0) {
+        console.warn("Received empty or invalid path graph", data);
+        return;
+      }
+      
       setCurrentPath(data);
 
       // Resumption logic: targetModuleId > localStorage > first unlocked > first module
-      const savedModuleId = targetModuleId || localStorage.getItem(`lastModule_${id}`);
-      const currentModule = data.modules?.find(m => m.id === savedModuleId) ||
-        data.modules?.find(m => m.status === "unlocked") ||
-        data.modules?.[0];
+      if (!stayOnCurrentView) {
+        const savedModuleId = targetModuleId || localStorage.getItem(`lastModule_${id}`);
+        const currentModule = data.modules?.find(m => m.id === savedModuleId) ||
+          data.modules?.find(m => m.status === "unlocked") ||
+          data.modules?.[0];
 
-      if (currentModule) setSelectedModule(currentModule);
+        if (currentModule) setSelectedModule(currentModule);
+      } else if (selectedModule) {
+        // Sync the status of the currently selected module if it changed in the background
+        const updatedSelf = data.modules?.find(m => m.id === selectedModule.id);
+        if (updatedSelf && updatedSelf.status !== selectedModule.status) {
+          setSelectedModule(updatedSelf);
+        }
+      }
 
-      setView("map");
-      setZoom(1);
-      setOffset({ x: 0, y: 0 });
+      if (!stayOnCurrentView) {
+        setView("map");
+        setZoom(1);
+        setOffset({ x: 0, y: 0 });
+      }
 
       // Save last read path
       localStorage.setItem("lastReadPathId", id);
     } catch (err) {
       console.error("Failed to load path", err);
     } finally {
-      setLoading(false);
+      if (!stayOnCurrentView) setLoading(false);
     }
   };
 
@@ -477,7 +543,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   })) : [];
 
   return (
-    <div className="np-dashboard-container" style={{ display: "flex", height: "100vh", background: "#f8fafc", userSelect: "none" }}>
+    <div className="np-dashboard-container" style={{ display: "flex", height: "100vh", background: "#f8fafc" }}>
 
       <aside className={`np-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`} style={{
         background: "#fff",
@@ -651,7 +717,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 </div>
               )}
             </div>
-            
+
             {!isSidebarCollapsed && (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "transform 0.2s", transform: showDropdown ? "rotate(90deg)" : "none" }}><path d="m9 18 6-6-6-6" /></svg>
             )}
@@ -1082,6 +1148,8 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 position: "relative",
                 cursor: isDragging ? "grabbing" : "grab",
                 background: "#f8fafc",
+                userSelect: "none",
+                WebkitUserSelect: "none"
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -1362,7 +1430,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                             background: isSelected ? "#fff" : "transparent",
                             boxShadow: isSelected ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
                             border: isSelected ? "1px solid #e2e8f0" : "1px solid transparent",
-                            marginBottom: "8px",
+                            marginBottom: "2px",
                             position: "relative",
                             zIndex: 1,
                             opacity: isLocked ? 0.5 : 1
@@ -1397,6 +1465,164 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                             </div>
                           </div>
                         </div>
+
+                        {/* Collapsible Side-Quest Section */}
+                        {mod.confusions && mod.confusions.length > 0 && !isLocked && (
+                          <div style={{ paddingLeft: "40px", marginTop: "12px", marginBottom: "16px", position: "relative" }}>
+                            {/* Decorative Connecting Line */}
+                            <div style={{
+                              position: "absolute",
+                              left: "20px",
+                              top: "-12px",
+                              bottom: "50%",
+                              width: "2px",
+                              background: "#e2e8f0",
+                              borderRadius: "0 0 0 4px",
+                              borderLeft: "2px solid #e2e8f0",
+                              borderBottom: "2px solid #e2e8f0",
+                              width: "12px",
+                              height: "22px"
+                            }} />
+                            {/* Toggle Button - Premium Redesign */}
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedConfusions(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(mod.id)) next.delete(mod.id);
+                                  else next.add(mod.id);
+                                  return next;
+                                });
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                padding: "8px 16px",
+                                borderRadius: "20px",
+                                cursor: "pointer",
+                                fontSize: "11px",
+                                fontWeight: "800",
+                                color: "#5A72F6",
+                                background: expandedConfusions.has(mod.id) ? "rgba(90, 114, 246, 0.1)" : "rgba(241, 245, 249, 0.8)",
+                                border: expandedConfusions.has(mod.id) ? "1px solid rgba(90, 114, 246, 0.2)" : "1px solid #e2e8f0",
+                                width: "fit-content",
+                                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                boxShadow: expandedConfusions.has(mod.id) ? "0 4px 12px rgba(90, 114, 246, 0.1)" : "none"
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.background = "rgba(90, 114, 246, 0.12)";
+                                e.currentTarget.style.transform = "translateY(-1px)";
+                                e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.06)";
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.background = expandedConfusions.has(mod.id) ? "rgba(90, 114, 246, 0.1)" : "rgba(241, 245, 249, 0.8)";
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = expandedConfusions.has(mod.id) ? "0 4px 12px rgba(90, 114, 246, 0.1)" : "none";
+                              }}
+                            >
+                              <div style={{ 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center",
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "50%",
+                                background: expandedConfusions.has(mod.id) ? "#5A72F6" : "rgba(90, 114, 246, 0.1)",
+                                color: expandedConfusions.has(mod.id) ? "#fff" : "#5A72F6",
+                                transition: "all 0.3s"
+                              }}>
+                                <svg 
+                                  width="10" 
+                                  height="10" 
+                                  viewBox="0 0 24 24" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  strokeWidth="3" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                  style={{ 
+                                    transform: expandedConfusions.has(mod.id) ? "rotate(90deg)" : "rotate(0deg)",
+                                    transition: "transform 0.3s"
+                                  }}
+                                >
+                                  <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                              </div>
+                              <span>Deep Dives</span>
+                              <span style={{ 
+                                background: expandedConfusions.has(mod.id) ? "rgba(255,255,255,0.2)" : "rgba(90, 114, 246, 0.1)", 
+                                padding: "2px 6px", 
+                                borderRadius: "6px",
+                                marginLeft: "4px"
+                              }}>
+                                {mod.confusions.length}
+                              </span>
+                            </div>
+
+                            {/* Expanded List */}
+                            {expandedConfusions.has(mod.id) && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px", animation: "slideDown 0.2s ease-out" }}>
+                                {mod.confusions.map((conf) => (
+                                  <div
+                                    key={conf.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedModule(mod);
+                                      setActiveConfusionId(conf.id);
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      padding: "6px 10px",
+                                      borderRadius: "8px",
+                                      cursor: "pointer",
+                                      transition: "all 0.2s",
+                                      background: activeConfusionId === conf.id ? "rgba(90, 114, 246, 0.08)" : "transparent",
+                                      border: activeConfusionId === conf.id ? "1px solid rgba(90, 114, 246, 0.2)" : "1px solid transparent",
+                                    }}
+                                    onMouseOver={(e) => {
+                                      if (activeConfusionId !== conf.id) e.currentTarget.style.background = "rgba(0,0,0,0.03)";
+                                    }}
+                                    onMouseOut={(e) => {
+                                      if (activeConfusionId !== conf.id) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: "14px",
+                                      height: "14px",
+                                      borderRadius: "4px",
+                                      background: conf.status === "resolved" ? "#10b981" : "#5A72F6",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "8px",
+                                      color: "#fff",
+                                      flexShrink: 0
+                                    }}>
+                                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                      </svg>
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: "11px", 
+                                      fontWeight: activeConfusionId === conf.id ? "700" : "500", 
+                                      color: activeConfusionId === conf.id ? "#5A72F6" : "#64748b",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis"
+                                    }}>
+                                      {conf.title}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1427,7 +1653,28 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#1e293b", marginBottom: "0px", lineHeight: "1.2" }}>{selectedModule?.title}</h3>
+                      {selectedModule?.status === "completed" && (
+                        <div style={{
+                          padding: "4px 10px",
+                          borderRadius: "20px",
+                          background: "rgba(16, 185, 129, 0.1)",
+                          color: "#10b981",
+                          fontSize: "10px",
+                          fontWeight: "800",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px"
+                        }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          Completed
+                        </div>
+                      )}
+                    </div>
                       <p style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.5", maxWidth: "800px" }}>
                         {selectedModule?.instructional_goal || "Explore the core concepts and practical applications of this topic with interactive AI guidance."}
                       </p>
@@ -1436,133 +1683,219 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 </div>
 
                 {/* Chat Messages */}
-                <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "16px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} style={{
-                      display: "flex",
-                      gap: "12px",
-                      flexDirection: msg.role === "user" ? "row-reverse" : "row"
-                    }}>
-                      <div style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        background: msg.role === "user" ? "#5A72F6" : "#f1f5f9",
-                        color: msg.role === "user" ? "#fff" : "#5A72F6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        fontSize: "13px",
-                        fontWeight: "700"
-                      }}>
-                        {msg.role === "user" ? (
-                          user?.name?.charAt(0).toUpperCase() || "U"
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="8" width="6" height="7" rx="1.5" />
-                            <rect x="15" y="2" width="6" height="7" rx="1.5" />
-                            <rect x="15" y="15" width="6" height="7" rx="1.5" />
-                            <path d="M9 11.5h3.5v-6h2.5" />
-                            <path d="M12.5 11.5v7h2.5" />
-                          </svg>
-                        )}
+                <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "16px 32px", display: "flex", flexDirection: "column", gap: "20px", height: "100%" }}>
+                  <TextSelectionWrapper
+                    disabled={loading || activeConfusion}
+                    rootModuleId={selectedModule?.id}
+                    token={localStorage.getItem("token")}
+                    onConfusionStarted={(nodeId) => {
+                      checkUnresolvedConfusion(selectedModule.id);
+                      setActiveConfusionId(nodeId);
+                      // Refresh roadmap silently to show the new node
+                      if (currentPath) {
+                        loadSpecificPath(currentPath.id, selectedModule.id, true);
+                      }
+                    }}
+                  >
+                    {activeConfusionId ? (
+                      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                        <ConfusionChat
+                          ref={confusionChatRef}
+                          token={localStorage.getItem("token")}
+                          nodeId={activeConfusionId}
+                          onBack={() => setActiveConfusionId(null)}
+                          onResolved={(val) => setIsConfusionResolved(val)}
+                        />
                       </div>
-                      <div style={{ flex: 1, maxWidth: "80%", textAlign: msg.role === "user" ? "right" : "left" }}>
-                        <div style={{
-                          background: msg.role === "user" ? "#5A72F6" : "#f1f5f9",
-                          color: msg.role === "user" ? "#fff" : "#334155",
-                          padding: "10px 16px",
-                          borderRadius: msg.role === "user" ? "18px 0 18px 18px" : "0 18px 18px 18px",
-                          fontSize: "14.5px",
-                          lineHeight: "1.6",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                          display: "inline-block",
-                          maxWidth: "100%",
-                          overflow: "hidden"
-                        }}>
-                          {msg.role === "user" ? (
-                            msg.content
-                          ) : typeof renderMessage(msg.content) === "string" ? (
-                            <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
-                          ) : (
-                            renderMessage(msg.content).map((part, pidx) =>
-                              part.type === "text" ? (
-                                <div key={pidx} style={{ whiteSpace: "pre-wrap", marginBottom: "12px" }}>
-                                  {formatInline(part.content)}
+                    ) : (
+                      <>
+                        {chatMessages.map((msg, idx) => {
+                          const isSideQuest = msg.role === "side_quest" || (msg.role === "system" && msg.content.includes("/confusion/"));
+                          
+                          if (isSideQuest) {
+                            // Extract title if possible, or use default
+                            const displayTitle = msg.content.includes("Side-Quest Summary") 
+                              ? "Side-Quest Resolved" 
+                              : "Side-Quest Started";
+
+                            return (
+                              <div key={idx} style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
+                                <div 
+                                  onClick={() => {
+                                    if (msg.confusion_node_id) setActiveConfusionId(msg.confusion_node_id);
+                                    else {
+                                      // Fallback: try to extract ID from content if it's a legacy system message
+                                      const match = msg.content.match(/\/confusion\/([a-zA-Z0-9-]+)/);
+                                      if (match) setActiveConfusionId(match[1]);
+                                    }
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    padding: "6px 12px",
+                                    background: "#f8fafc",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "20px",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                    fontSize: "12px",
+                                    fontWeight: "600",
+                                    color: "#64748b",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.background = "#fff";
+                                    e.currentTarget.style.borderColor = "#5A72F6";
+                                    e.currentTarget.style.color = "#5A72F6";
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.background = "#f8fafc";
+                                    e.currentTarget.style.borderColor = "#e2e8f0";
+                                    e.currentTarget.style.color = "#64748b";
+                                  }}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                  {displayTitle}
+                                  <span style={{ fontSize: "10px", opacity: 0.6, fontWeight: "500" }}>• View</span>
                                 </div>
-                              ) : (
-                                <div key={pidx} style={{ margin: "12px -16px -14px -16px", borderRadius: "0 0 8px 8px", overflow: "hidden", maxWidth: "600px" }}>
-                                  <div style={{ background: "#1a1a1a", color: "#e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid #333" }}>
-                                    <div style={{ display: "flex", gap: "6px" }}>
-                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#ff5f57" }} />
-                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#febc2e" }} />
-                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#28c840" }} />
-                                    </div>
-                                    <span style={{ fontSize: "12px", fontWeight: "600", marginLeft: "8px", color: "#94a3b8" }}>
-                                      {part.language} — Terminal
-                                    </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={idx} data-message-id={msg.id || idx} style={{
+                              display: "flex",
+                              gap: "12px",
+                              flexDirection: msg.role === "user" ? "row-reverse" : "row",
+                              marginBottom: "28px" // Increased spacing between message rows
+                            }}>
+                              <div style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                background: msg.role === "user" ? "#5A72F6" : "#f1f5f9",
+                                color: msg.role === "user" ? "#fff" : "#5A72F6",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                fontSize: "13px",
+                                fontWeight: "700"
+                              }}>
+                                {msg.role === "user" ? (
+                                  user?.name?.charAt(0).toUpperCase() || "U"
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="8" width="6" height="7" rx="1.5" />
+                                    <rect x="15" y="2" width="6" height="7" rx="1.5" />
+                                    <rect x="15" y="15" width="6" height="7" rx="1.5" />
+                                    <path d="M9 11.5h3.5v-6h2.5" />
+                                    <path d="M12.5 11.5v7h2.5" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div style={{ flex: 1, maxWidth: "80%", textAlign: msg.role === "user" ? "right" : "left" }}>
+                                <div style={{
+                                  background: msg.role === "user" ? "#5A72F6" : "#f1f5f9",
+                                  color: msg.role === "user" ? "#fff" : "#334155",
+                                  padding: "10px 16px",
+                                  borderRadius: msg.role === "user" ? "18px 0 18px 18px" : "0 18px 18px 18px",
+                                  fontSize: "14.5px",
+                                  lineHeight: "1.6",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                                  display: "inline-block",
+                                  maxWidth: "100%",
+                                  userSelect: "text",
+                                  WebkitUserSelect: "text"
+                                }}>
+                                  {msg.role === "user" ? (
+                                    msg.content
+                                  ) : typeof renderMessage(msg.content) === "string" ? (
+                                    <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+                                  ) : (
+                                    renderMessage(msg.content).map((part, pidx) =>
+                                      part.type === "text" ? (
+                                        <div key={pidx} style={{ whiteSpace: "pre-wrap", marginBottom: "12px" }}>
+                                          {formatInline(part.content)}
+                                        </div>
+                                      ) : (
+                                        <div key={pidx} style={{ margin: "16px 0", borderRadius: "12px", overflow: "hidden", border: "1px solid #334155", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+                                          <div style={{ background: "#1e293b", color: "#94a3b8", padding: "10px 16px", display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid #334155" }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A72F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                              <polyline points="16 18 22 12 16 6" />
+                                              <polyline points="8 6 2 12 8 18" />
+                                            </svg>
+                                            <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.05em", color: "#e2e8f0" }}>
+                                              {part.language || "Code"}
+                                            </span>
+                                          </div>
+                                          <pre style={{ background: "#0f172a", color: "#f8fafc", padding: "20px", fontSize: "13px", fontFamily: "'JetBrains Mono', 'Fira Code', monospace", overflow: "auto", margin: 0, lineHeight: "1.7" }}>
+                                            <code style={{ color: part.language === "xml" || part.language === "html" ? "#4ade80" : "#f8fafc" }}>{part.code}</code>
+                                          </pre>
+                                        </div>
+                                      )
+                                    )
+                                  )}
+                                </div>
+                                {msg.role === "assistant" && idx === chatMessages.length - 1 && !isStreaming && (
+                                  <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+                                    <button onClick={() => handleSendMessage("Tell me more")} style={{ padding: "8px 16px", borderRadius: "20px", border: "1px solid #e2e8f0", background: "#fff", fontSize: "13px", fontWeight: "600", color: "#64748b", cursor: "pointer" }}>Tell me more</button>
+                                    <button onClick={() => handleSendMessage("Give me an example")} style={{ padding: "8px 16px", borderRadius: "20px", border: "1px solid #e2e8f0", background: "#fff", fontSize: "13px", fontWeight: "600", color: "#64748b", cursor: "pointer" }}>Give me an example</button>
                                   </div>
-                                  <pre style={{ background: "#0f0f0f", color: "#00ff00", padding: "16px", fontSize: "13px", fontFamily: "monospace", overflow: "auto", margin: 0, lineHeight: "1.5", maxWidth: "600px" }}>
-                                    <code>{part.code}</code>
-                                  </pre>
-                                </div>
-                              )
-                            )
-                          )}
-                        </div>
-                        {msg.role === "assistant" && idx === chatMessages.length - 1 && !isStreaming && (
-                          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-                            <button onClick={() => handleSendMessage("Tell me more")} style={{ padding: "8px 16px", borderRadius: "20px", border: "1px solid #e2e8f0", background: "#fff", fontSize: "13px", fontWeight: "600", color: "#64748b", cursor: "pointer" }}>Tell me more</button>
-                            <button onClick={() => handleSendMessage("Give me an example")} style={{ padding: "8px 16px", borderRadius: "20px", border: "1px solid #e2e8f0", background: "#fff", fontSize: "13px", fontWeight: "600", color: "#64748b", cursor: "pointer" }}>Give me an example</button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {isStreaming && (
+                          <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                            <div style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              background: "#f1f5f9",
+                              color: "#5A72F6",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0
+                            }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="8" width="6" height="7" rx="1.5" />
+                                <rect x="15" y="2" width="6" height="7" rx="1.5" />
+                                <rect x="15" y="15" width="6" height="7" rx="1.5" />
+                                <path d="M9 11.5h3.5v-6h2.5" />
+                                <path d="M12.5 11.5v7h2.5" />
+                              </svg>
+                            </div>
+                            <div style={{ flex: 1, maxWidth: "80%", textAlign: "left" }}>
+                              <div style={{
+                                background: "#f1f5f9",
+                                color: "#334155",
+                                padding: "10px 16px",
+                                borderRadius: "0 18px 18px 18px",
+                                fontSize: "14.5px",
+                                lineHeight: "1.6",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                                minHeight: "40px",
+                                gap: "10px",
+                                width: "fit-content"
+                              }}>
+                                <div className="spinner" style={{ width: "16px", height: "16px", margin: 0 }} />
+                                <span style={{ color: "#94a3b8", fontSize: "14px" }}>Tutoring...</span>
+                              </div>
+                            </div>
                           </div>
                         )}
-                      </div>
-                    </div>
-                  ))}
-                  {isStreaming && (
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                      <div style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        background: "#f1f5f9",
-                        color: "#5A72F6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0
-                      }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="8" width="6" height="7" rx="1.5" />
-                          <rect x="15" y="2" width="6" height="7" rx="1.5" />
-                          <rect x="15" y="15" width="6" height="7" rx="1.5" />
-                          <path d="M9 11.5h3.5v-6h2.5" />
-                          <path d="M12.5 11.5v7h2.5" />
-                        </svg>
-                      </div>
-                      <div style={{ flex: 1, maxWidth: "80%", textAlign: "left" }}>
-                        <div style={{
-                          background: "#f1f5f9",
-                          color: "#334155",
-                          padding: "10px 16px",
-                          borderRadius: "0 18px 18px 18px",
-                          fontSize: "14.5px",
-                          lineHeight: "1.6",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                          minHeight: "40px",
-                          gap: "10px",
-                          width: "fit-content"
-                        }}>
-                          <div className="spinner" style={{ width: "16px", height: "16px", margin: 0 }} />
-                          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Tutoring...</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </TextSelectionWrapper>
                 </div>
 
                 {/* Chat Input Container (Integrated Style) */}
@@ -1592,6 +1925,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                         <button
                           onClick={() => setIsDebugMode(!isDebugMode)}
                           title={isDebugMode ? "God Mode Active" : "Enable Debug Mode"}
+                          disabled={isStreaming || (activeConfusionId && isConfusionResolved)}
                           style={{
                             position: "absolute",
                             left: "10px",
@@ -1622,13 +1956,14 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           <textarea
                             value={chatInput}
                             onChange={(e) => setChatInput(e.target.value)}
+                            disabled={isStreaming || (activeConfusionId && isConfusionResolved)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSendMessage();
                               }
                             }}
-                            placeholder="Ask the tutor anything..."
+                            placeholder={(activeConfusionId && isConfusionResolved) ? "Side-quest is resolved (Read Only)" : "Ask the tutor anything..."}
                             style={{
                               width: "100%",
                               height: "44px",
@@ -1637,21 +1972,22 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                               padding: "12px 52px 10px 52px",
                               borderRadius: "22px",
                               border: "1px solid #e2e8f0",
-                              background: "#f8fafc",
+                              background: (activeConfusionId && isConfusionResolved) ? "#f1f5f9" : "#f8fafc",
                               fontSize: "14px",
-                              color: "#1e293b",
+                              color: (activeConfusionId && isConfusionResolved) ? "#94a3b8" : "#1e293b",
                               outline: "none",
                               resize: "none",
                               fontFamily: "inherit",
                               lineHeight: "20px",
                               transition: "all 0.2s",
                               boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                              display: "block"
+                              display: "block",
+                              cursor: (activeConfusionId && isConfusionResolved) ? "not-allowed" : "text"
                             }}
                           />
                           <button
                             onClick={() => handleSendMessage()}
-                            disabled={!chatInput.trim() || isStreaming}
+                            disabled={!chatInput.trim() || isStreaming || (activeConfusionId && isConfusionResolved)}
                             style={{
                               position: "absolute",
                               right: "6px",
@@ -1660,10 +1996,10 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                               width: "32px",
                               height: "32px",
                               borderRadius: "16px",
-                              background: chatInput.trim() ? "#5A72F6" : "#e2e8f0",
+                              background: (chatInput.trim() && !isStreaming && !(activeConfusionId && isConfusionResolved)) ? "#5A72F6" : "#e2e8f0",
                               color: "#fff",
                               border: "none",
-                              cursor: "pointer",
+                              cursor: (activeConfusionId && isConfusionResolved) ? "not-allowed" : "pointer",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",

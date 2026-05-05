@@ -119,11 +119,11 @@ export default function App() {
         />
       )}
       {page === "main" && (
-        <MainPage 
-          initialGoal={prefillGoal} 
-          onBack={goToLanding} 
-          onGenerate={(goal, diff, comm) => goToChats(goal, diff, comm)} 
-          onGoToDashboard={() => goToDashboard()} 
+        <MainPage
+          initialGoal={prefillGoal}
+          onBack={goToLanding}
+          onGenerate={(goal, diff, comm) => goToChats(goal, diff, comm)}
+          onGoToDashboard={() => goToDashboard()}
           user={user}
           onLogout={goToLogin}
         />
@@ -145,12 +145,12 @@ export default function App() {
         <SignupPage onBack={goToLanding} onSignupSuccess={goToLogin} onLogin={goToLogin} />
       )}
       {page === "setup-chat" && setupChatData && (
-        <SetupChatPage 
-          goal={setupChatData.goal} 
-          difficulty={setupChatData.difficulty} 
-          commitment={setupChatData.commitment} 
-          onBack={() => goToMain()} 
-          onFinish={goToDashboard} 
+        <SetupChatPage
+          goal={setupChatData.goal}
+          difficulty={setupChatData.difficulty}
+          commitment={setupChatData.commitment}
+          onBack={() => goToMain()}
+          onFinish={goToDashboard}
         />
       )}
       {page === "dashboard" && (

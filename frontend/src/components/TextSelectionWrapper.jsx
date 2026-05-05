@@ -1,231 +1,244 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-const TextSelectionWrapper = ({ children, disabled, rootModuleId, parentConfusionId, token }) => {
-    const navigate = useNavigate();
-    const [capturedText, setCapturedText] = useState('');
-    const [messageId, setMessageId] = useState(null);
+/**
+ * TextSelectionWrapper
+ * Wraps a content area and monitors text selection.
+ * When text is selected, shows a "Confused?" floating button.
+ */
+const TextSelectionWrapper = ({ children, disabled, rootModuleId, parentConfusionId, token, onConfusionStarted }) => {
+    const [selectionData, setSelectionData] = useState(null);
     const [tooltipPos, setTooltipPos] = useState(null);
     const [showInput, setShowInput] = useState(false);
-    const [userQuery, setUserQuery] = useState('');
+    const [question, setQuestion] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
     const wrapperRef = useRef(null);
 
-    // Watch the entire document for selection changes
+    // Watch for selection changes to clear the popup when text is deselected
     useEffect(() => {
         const handleSelectionChange = () => {
-            const currentText = window.getSelection().toString().trim();
-            
-            // If the text selection is cleared, hide the button.
-            if (!currentText) {
-                setShowInput((prevShowInput) => {
-                    // We ONLY hide it if it's currently a 'button' (!showInput). If it's an 'input', we let them finish typing.
-                    if (!prevShowInput) {
-                        setTooltipPos(null);
-                        setCapturedText('');
-                        setMessageId(null);
-                        setUserQuery('');
-                    }
-                    return prevShowInput;
-                });
+            const selection = window.getSelection();
+            const currentText = selection.toString().trim();
+
+            if (!currentText && !showInput) {
+                setTooltipPos(null);
+                setSelectionData(null);
             }
         };
 
         document.addEventListener('selectionchange', handleSelectionChange);
-        
-        // Cleanup listener on unmount
-        return () => {
-            document.removeEventListener('selectionchange', handleSelectionChange);
-        };
-    }, []);
+        return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    }, [showInput]);
 
+    // Handle mouseup globally but filter for our wrapper
     useEffect(() => {
-        const handleMouseUp = () => {
-            if (disabled) return;
+        const handleMouseUp = (e) => {
+            // Check if click was inside our wrapper
+            if (!wrapperRef.current || !wrapperRef.current.contains(e.target)) {
+                return;
+            }
 
+            /* 
+            if (disabled) {
+                return;
+            }
+            */
+
+            // Capture selection immediately before any state changes or timeouts
             const selection = window.getSelection();
-            const text = selection.toString().trim();
+            const selectedText = selection.toString().trim();
 
-            if (text && text.length > 0) {
-                // Find the closest message ID
-                let node = selection.anchorNode;
-                if (node.nodeType === 3) node = node.parentNode; // text node -> element
-
-                const messageElem = node.closest('[data-message-id]');
-                if (!messageElem) return;
-
-                const msgId = messageElem.getAttribute('data-message-id');
-                const range = selection.getRangeAt(0).getBoundingClientRect();
-                const wrapperRect = wrapperRef.current.getBoundingClientRect();
-
-                // Calculate fixed viewport position for the tooltip
-                const pos = {
-                    top: range.top,
-                    left: range.left + (range.width / 2)
-                };
-
-                setCapturedText(text);
-                setMessageId(parseInt(msgId, 10) || msgId);
-                setTooltipPos(pos);
-                setShowInput(false);
-                setUserQuery('');
-            } else if (!showInput) {
-                // If they click away and not currently typing
-                clearSelection();
+            if (!selectedText) {
+                return;
             }
+
+
+
+            // Small delay for DOM rects to be stable
+            setTimeout(() => {
+                try {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+
+                    // Find the closest message container with an ID
+                    let node = selection.anchorNode;
+                    if (node.nodeType === 3) node = node.parentNode;
+
+                    const messageElem = node.closest('[data-message-id]');
+                    if (!messageElem) {
+                        return;
+                    }
+
+                    const messageId = messageElem.getAttribute('data-message-id');
+
+                    setSelectionData({
+                        text: selectedText,
+                        messageId: messageId
+                    });
+
+                    // IMPORTANT: Check coordinates
+                    console.log('Selection Rect:', rect);
+
+                    setTooltipPos({
+                        top: rect.top - 55,
+                        left: rect.left + (rect.width / 2)
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
+            }, 50);
         };
 
-        const wrapperElement = wrapperRef.current;
-        if (wrapperElement) {
-            wrapperElement.addEventListener('mouseup', handleMouseUp);
-        }
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => document.removeEventListener('mouseup', handleMouseUp);
+    }, [disabled]);
 
-        return () => {
-            if (wrapperElement) {
-                wrapperElement.removeEventListener('mouseup', handleMouseUp);
-            }
-        };
-    }, [disabled, showInput]);
+    const handleStartConfusion = async () => {
+        if (!question.trim() || isLoading) return;
+        setIsLoading(true);
 
-    const clearSelection = () => {
-        setCapturedText('');
-        setMessageId(null);
-        setTooltipPos(null);
-        setShowInput(false);
-        setUserQuery('');
-    };
-
-    const handleStart = async () => {
-        if (!userQuery.trim()) return;
-        
         try {
-            const res = await fetch('/api/confusions/start', {
+            const response = await fetch('/api/confusions/start', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     root_module_id: rootModuleId,
-                    parent_confusion_id: parentConfusionId,
-                    message_id: messageId,
-                    highlighted_text: capturedText,
-                    user_query: userQuery.trim()
+                    parent_confusion_id: parentConfusionId || null,
+                    message_id: selectionData.messageId,
+                    highlighted_text: selectionData.text,
+                    user_query: question
                 })
             });
 
-            if (!res.ok) throw new Error("Failed to start side-quest");
-            const data = await res.json();
-            
-            navigate('/confusion/' + data.id);
-        } catch (e) {
-            console.error("Side-quest error:", e);
-        } finally {
-            clearSelection();
-        }
-    };
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to start side-quest");
+            }
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handleStart();
-        } else if (e.key === 'Escape') {
-            clearSelection();
+            const data = await response.json();
+
+            // Reset state
+            setTooltipPos(null);
+            setSelectionData(null);
+            setShowInput(false);
+            setQuestion('');
+
+            if (onConfusionStarted) {
+                onConfusionStarted(data.id);
+            } else {
+                window.location.href = `/confusion/${data.id}`;
+            }
+        } catch (err) {
+            console.error('Side-quest spawn error:', err);
+            alert(`Error starting side-quest: ${err.message}`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div ref={wrapperRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        <div ref={wrapperRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
             {children}
 
             {tooltipPos && (
                 <div
-                    className="selection-popup-container"
                     style={{
                         position: 'fixed',
-                        // Ensure it floats cleanly ABOVE the text
-                        top: tooltipPos.top - 60, 
+                        top: tooltipPos.top,
                         left: tooltipPos.left,
                         transform: 'translateX(-50%)',
-                        zIndex: 9999,
-                        // Opaque container box
-                        backgroundColor: '#1e1e2e', 
-                        border: '1px solid #444',
-                        borderRadius: '8px',
-                        // Heavy drop shadow so it pops off the background
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.8)', 
+                        zIndex: 99999,
+                        backgroundColor: '#ffffff',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
                         padding: '6px',
                         display: 'flex',
                         gap: '8px',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        animation: 'popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                     }}
                 >
                     {!showInput ? (
                         <button
-                            onMouseDown={(e) => {
-                                // Use onMouseDown + preventDefault to stop the browser 
-                                // from clearing the text selection when the button is clicked!
-                                e.preventDefault(); 
-                            }}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => setShowInput(true)}
-                            style={{ 
-                                backgroundColor: '#ffb86c', // Solid bright accent color
-                                color: '#000000', // Black text for high contrast
-                                padding: '8px 16px', 
-                                borderRadius: '4px', 
-                                border: 'none', 
-                                cursor: 'pointer', 
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                            style={{
+                                backgroundColor: '#5A72F6',
+                                color: '#ffffff',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                boxShadow: '0 4px 12px rgba(90, 114, 246, 0.2)'
                             }}
                         >
-                            <span style={{ fontSize: '16px' }}>❓</span> Confused?
+                            Confused?
                         </button>
                     ) : (
-                        <>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '2px 4px' }}>
                             <input
                                 autoFocus
                                 type="text"
-                                placeholder="What's confusing about this?"
-                                value={userQuery}
-                                onChange={(e) => setUserQuery(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                style={{ 
-                                    padding: '8px 12px', 
-                                    borderRadius: '4px', 
-                                    border: '1px solid #555', 
-                                    backgroundColor: '#0f0f17', 
-                                    color: '#fff', 
-                                    outline: 'none', 
-                                    width: '250px' 
+                                value={question}
+                                onChange={(e) => setQuestion(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleStartConfusion()}
+                                placeholder="What's confusing?"
+                                style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    padding: '6px 10px',
+                                    fontSize: '12px',
+                                    outline: 'none',
+                                    width: '160px'
                                 }}
                             />
                             <button
-                                onClick={clearSelection}
-                                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.85rem' }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleStart}
-                                style={{ 
-                                    backgroundColor: '#50fa7b', 
-                                    color: '#000000', 
-                                    padding: '8px 16px', 
-                                    borderRadius: '4px', 
-                                    border: 'none', 
-                                    cursor: 'pointer', 
-                                    fontWeight: 'bold' 
+                                onClick={handleStartConfusion}
+                                disabled={!question.trim() || isLoading}
+                                style={{
+                                    backgroundColor: '#5A72F6',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '6px 10px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    opacity: (!question.trim() || isLoading) ? 0.6 : 1
                                 }}
                             >
-                                Ask
+                                {isLoading ? '...' : 'Ask'}
                             </button>
-                        </>
+                            <button
+                                onClick={() => { setShowInput(false); setTooltipPos(null); }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
+
+            <style>{`
+                @keyframes popIn {
+                    from { transform: translateX(-50%) scale(0.9); opacity: 0; }
+                    to { transform: translateX(-50%) scale(1); opacity: 1; }
+                }
+            `}</style>
         </div>
     );
 };

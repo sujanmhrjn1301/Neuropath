@@ -199,7 +199,7 @@ You are a patient, conversational tutor. You MUST NOT explain everything at once
                             node.status = "resolved"
 
                             # Inject return_summary into parent history
-                            system_msg = f"[**Side-Quest Summary ({node.title})**](/confusion/{node.id}): {return_summary}"
+                            system_msg = f"Side-quest was resolved [/confusion/{node.id}]"
                             if node.parent_confusion_id:
                                 db.add(ConfusionChatMessage(
                                     confusion_node_id=node.parent_confusion_id,
