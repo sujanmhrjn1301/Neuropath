@@ -2,6 +2,115 @@ import { useState, useEffect, useRef } from "react";
 import { LogoIcon } from "../components/Icons";
 import "../styles/pages.css";
 
+// Format inline markdown (bold, inline code)
+const formatInline = (text) => {
+  // Split by bold and inline code patterns
+  const parts = [];
+  let lastIndex = 0;
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  const inlineCodeRegex = /`([^`]+)`/g;
+
+  // Create a combined regex to find all markdown elements in order
+  const combined = text.replace(
+    /(\*\*.*?\*\*|`[^`]+`)/g,
+    (match) => {
+      if (match.startsWith("**")) {
+        return `__BOLD_START__${match.slice(2, -2)}__BOLD_END__`;
+      } else if (match.startsWith("`")) {
+        return `__CODE_START__${match.slice(1, -1)}__CODE_END__`;
+      }
+      return match;
+    }
+  );
+
+  // Split by markers and reconstruct with JSX
+  return combined.split(/(__BOLD_START__|__BOLD_END__|__CODE_START__|__CODE_END__)/).map((fragment, idx) => {
+    if (fragment === "__BOLD_START__") return null;
+    if (fragment === "__BOLD_END__") return null;
+    if (fragment === "__CODE_START__") return null;
+    if (fragment === "__CODE_END__") return null;
+
+    // Check if this should be bold or code
+    const isBold = combined.substring(0, combined.indexOf(fragment)).match(/__BOLD_START__/g)?.length >
+                   combined.substring(0, combined.indexOf(fragment)).match(/__BOLD_END__/g)?.length;
+    const isCode = combined.substring(0, combined.indexOf(fragment)).match(/__CODE_START__/g)?.length >
+                   combined.substring(0, combined.indexOf(fragment)).match(/__CODE_END__/g)?.length;
+
+    if (isBold) {
+      return <strong key={idx}>{fragment}</strong>;
+    }
+    if (isCode) {
+      return (
+        <code
+          key={idx}
+          style={{
+            background: "#f1f5f9",
+            color: "#5A72F6",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontFamily: "monospace",
+            fontSize: "13px",
+            fontWeight: "600"
+          }}
+        >
+          {fragment}
+        </code>
+      );
+    }
+    return fragment;
+  }).filter(Boolean);
+};
+
+// Code block renderer with terminal styling
+const renderMessage = (content) => {
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Add text before the code block
+    if (match.index > lastIndex) {
+      const textBefore = content.slice(lastIndex, match.index);
+      // Check for standalone code lines in the text
+      const lines = textBefore.split("\n");
+      lines.forEach((line, idx) => {
+        const trimmed = line.trim();
+        // Detect if this line looks like code (contains common programming patterns)
+        const looksLikeCode = /^[a-zA-Z_$][a-zA-Z0-9_$]*(\[.*?\])?.*[=;{}\(\)].*/.test(trimmed);
+        if (looksLikeCode && trimmed.length > 10 && !trimmed.includes(" is ") && !trimmed.includes(" or ")) {
+          // This looks like a code line
+          if (idx > 0) parts.push({ type: "text", content: lines.slice(0, idx).join("\n") });
+          // Detect language from the code
+          let lang = "code";
+          if (trimmed.includes("import ") || trimmed.includes("public ") || trimmed.includes("class ")) lang = "java";
+          else if (trimmed.includes("def ") || trimmed.includes("import ")) lang = "python";
+          else if (trimmed.includes("const ") || trimmed.includes("function ")) lang = "javascript";
+          parts.push({ type: "code", language: lang, code: trimmed });
+          lines.splice(0, idx + 1);
+        } else if (trimmed) {
+          parts.push({ type: "text", content: line + (idx < lines.length - 1 ? "\n" : "") });
+        }
+      });
+    }
+    // Add code block
+    parts.push({ type: "code", language: match[1] || "code", code: match[2].trimEnd() });
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", content: content.slice(lastIndex) });
+  }
+
+  // If no code blocks found, return plain text
+  if (parts.length === 0) {
+    return content;
+  }
+
+  return parts;
+};
+
 export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user }) {
   const [loading, setLoading] = useState(true);
   const [allPaths, setAllPaths] = useState([]);
@@ -1343,10 +1452,12 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        flexShrink: 0
+                        flexShrink: 0,
+                        fontSize: "13px",
+                        fontWeight: "700"
                       }}>
                         {msg.role === "user" ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                          user?.name?.charAt(0).toUpperCase() || "U"
                         ) : (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="8" width="6" height="7" rx="1.5" />
@@ -1365,11 +1476,40 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           borderRadius: msg.role === "user" ? "18px 0 18px 18px" : "0 18px 18px 18px",
                           fontSize: "14.5px",
                           lineHeight: "1.6",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                           display: "inline-block",
-                          textAlign: "left",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                          maxWidth: "100%",
+                          overflow: "hidden"
                         }}>
-                          {msg.content}
+                          {msg.role === "user" ? (
+                            msg.content
+                          ) : typeof renderMessage(msg.content) === "string" ? (
+                            <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+                          ) : (
+                            renderMessage(msg.content).map((part, pidx) =>
+                              part.type === "text" ? (
+                                <div key={pidx} style={{ whiteSpace: "pre-wrap", marginBottom: "12px" }}>
+                                  {formatInline(part.content)}
+                                </div>
+                              ) : (
+                                <div key={pidx} style={{ margin: "12px -16px -14px -16px", borderRadius: "0 0 8px 8px", overflow: "hidden", maxWidth: "600px" }}>
+                                  <div style={{ background: "#1a1a1a", color: "#e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid #333" }}>
+                                    <div style={{ display: "flex", gap: "6px" }}>
+                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#ff5f57" }} />
+                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#febc2e" }} />
+                                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#28c840" }} />
+                                    </div>
+                                    <span style={{ fontSize: "12px", fontWeight: "600", marginLeft: "8px", color: "#94a3b8" }}>
+                                      {part.language} — Terminal
+                                    </span>
+                                  </div>
+                                  <pre style={{ background: "#0f0f0f", color: "#00ff00", padding: "16px", fontSize: "13px", fontFamily: "monospace", overflow: "auto", margin: 0, lineHeight: "1.5", maxWidth: "600px" }}>
+                                    <code>{part.code}</code>
+                                  </pre>
+                                </div>
+                              )
+                            )
+                          )}
                         </div>
                         {msg.role === "assistant" && idx === chatMessages.length - 1 && !isStreaming && (
                           <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
