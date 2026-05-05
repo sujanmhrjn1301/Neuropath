@@ -892,3 +892,168 @@ Okay, I understand. Since you're just starting out, let's try a slightly differe
 --- NEW STREAM ---
 Since we seem to be having trouble establishing a baseline, I'll proceed with a general assessment based on the assumption that you're starting with very little prior knowledge in machine learning.
 
+
+
+--- NEW STREAM ---
+Alright, let's dive in. To get a better understanding of your current skills relevant to building LLMs from scratch, let's start with a few questions about your machine learning background.
+
+1.  Could you describe your experience with different machine learning algorithms, particularly those relevant to natural language processing, such as recurrent neural networks (RNNs), transformers, or attention mechanisms?
+
+2.  How familiar are you with the deep learning frameworks such as TensorFlow or PyTorch? Have you used them to build and train custom models?
+
+3.  Can you share your experience with large datasets, including data preprocessing, cleaning, and handling techniques for text data?
+
+
+--- NEW STREAM ---
+Thanks for the clarification. It's helpful to know where to focus. Let's adjust the line of questioning slightly, keeping your goal of building LLMs in mind.
+
+1.  Have you worked with any sequence-to-sequence models, even outside the realm of NLP? Perhaps in time series analysis, or any other domain?
+
+2.  What is your understanding of the concept of word embeddings (e.g., Word2Vec, GloVe, FastText), and have you ever implemented or used pre-trained embeddings in any of your projects?
+
+3.  Aside from RNNs, are there any other specific areas of machine learning or deep learning that you *do* have some experience with, even if it's not directly related to NLP? This could include convolutional neural networks (CNNs), general classification or regression tasks, or even unsupervised learning techniques.
+
+
+--- NEW STREAM ---
+Alright, let's begin! Given your goal of understanding how LLMs are made from scratch, I want to assess your current knowledge in areas crucial to that endeavor.
+
+1.  How familiar are you with the mathematical foundations of machine learning, particularly linear algebra, calculus, and probability theory? Can you describe a situation where you've applied these concepts practically?
+
+2.  What is your experience with different neural network architectures (e.g., RNNs, Transformers)? Have you implemented any of these from scratch or used them extensively with deep learning frameworks?
+
+3.  How comfortable are you with natural language processing (NLP) concepts like tokenization, embedding, and sequence-to-sequence models?
+
+
+--- NEW STREAM ---
+Okay, no problem. Let's adjust our course slightly. Building LLMs from scratch involves a fair bit of coding and data handling as well.
+
+1.  What is your level of experience with Python? Have you built any projects using it, and are you comfortable with object-oriented programming principles?
+
+2.  Have you worked with any deep learning frameworks like TensorFlow or PyTorch? If so, what kind of models have you built or trained?
+
+3.  Have you had any experience working with large datasets, including data cleaning, preprocessing, and storage?
+
+--- NEW STREAM ---
+"Vibe coder" is a new term for me! Understood. Since you're aiming to build LLMs, let's focus on the practical aspects you're familiar with and identify key areas for growth.
+
+1.  Can you elaborate on your Python experience? What kind of projects have you worked on, and are you comfortable with concepts like data structures, algorithms, and working with APIs?
+
+2.  Have you ever experimented with any NLP libraries in Python, such as NLTK or spaCy, even if just on a small scale?
+
+3.  Are you familiar with the concept of version control systems like Git? Have you used them to collaborate on projects or manage your code?
+
+--- NEW STREAM ---
+That's helpful! Building an anime website and a ChatGPT clone (even with API calls) gives you a practical foundation. Let's refine our focus.
+
+1.  When building your ChatGPT clone, what steps did you take to process the input and output text (even if the API handled most of the heavy lifting)? Did you do any pre-processing or post-processing of the text?
+
+2.  Regarding your anime website, how did you handle the data (e.g., anime titles, descriptions, images)? Was it stored in a database, and if so, what kind?
+
+3.  Beyond just using Git, are you familiar with branching strategies, pull requests, and resolving merge conflicts in a collaborative coding environment?
+
+
+--- NEW STREAM ---
+Okay, good to know. Let's make sure I have a clear picture of your current abilities and the areas we need to focus on to help you achieve your goal of building LLMs.
+
+1.  Have you ever fine-tuned a pre-trained model, even if it wasn't an LLM? This would give you some experience with transfer learning, which is a common technique.
+
+2.  Are you familiar with cloud computing platforms like AWS, Google Cloud, or Azure? LLMs often require significant computational resources.
+
+3.  Can you describe your understanding of the ethical considerations surrounding LLMs (e.g., bias, misinformation)?
+
+
+--- NEW STREAM ---
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+
+--- NEW STREAM ---
+Alright, let's get started. Since your goal is to learn the basics of model prediction, I want to first assess your understanding of the foundational concepts.
+
+1.  Have you worked with any datasets before, even in the context of your website or ChatGPT clone projects? If so, can you describe the data and what you did with it?
+
+2.  Are you familiar with the concept of supervised vs. unsupervised learning, and can you give a brief example of each?
+
+
+--- NEW STREAM ---
+Okay, that's a good starting point. Let's dig a bit deeper into supervised learning since that's often the first step in model prediction.
+
+1. Have you encountered the terms "features" and "labels" (or "targets") in the context of supervised learning? If so, can you explain how they relate to each other?
+
+2. Have you heard of different types of supervised learning algorithms like linear regression or classification? If so, what's your understanding of the difference between regression and classification tasks?
+
+3. Do you have any experience with evaluating the performance of a model? For example, have you heard of metrics like accuracy, precision, or recall?
+
+--- NEW STREAM ---
+Alright, thanks for the info. Let's narrow our focus even further. Since you've heard of regression, let's explore that a bit.
+
+1.  In simple terms, how would you describe what a regression model does?
+
+2.  Do you have any intuition about how a regression model "learns" from data to make predictions?
+
+3.  Have you encountered the term "loss function" or "cost function" in the context of regression?
+
+--- NEW STREAM ---
+Okay, no problem at all. It sounds like we've identified some key areas where we can focus your learning path.
+
+
+
+--- NEW STREAM ---
+Okay, great. To start, since your goal is mastering C#, let's dive into your programming background.
+
+1.  Beyond your Python projects, have you worked with any other object-oriented languages like Java or C++? This will help me understand your familiarity with OOP concepts that are central to C#.
+
+2.  Also, have you ever used any specific IDEs (Integrated Development Environments) such as Visual Studio or VS Code with C# extensions?
+
+3. What is your experience with .NET framework?
+
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+
+--- NEW STREAM ---
+Okay, that's perfectly fine. We'll start from the ground up.
+
+1.  Have you ever worked with typed languages and declaring variable types (e.g., `int`, `string`, `bool`) or is your experience primarily with dynamically typed languages like Python?
+
+2.  Are you familiar with the concept of classes and objects? If so, what is your practical experience using them in Python? Could you describe a scenario where you've implemented a class to solve a problem?
+
+3. Have you worked with any data serialization formats like JSON or XML, and if so, in what context?
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+
+--- NEW STREAM ---
+Okay, great. Since you have Python experience, let's leverage that.
+
+1.  Are you familiar with the concept of namespaces and how they're used to organize code?
+
+2.  Have you ever worked with any GUI (Graphical User Interface) frameworks, either in Python or any other language?
+
+3.  Do you understand the difference between value types and reference types?
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+--- NEW STREAM ---
+Okay, good to know. Let's keep going.
+
+1.  Have you ever used any libraries or frameworks for handling asynchronous operations or multithreading?
+
+2.  Are you familiar with working with file systems, such as reading from and writing to files?
+
+3.  Have you used any form of dependency management or package management (like pip in Python), and if so, are you comfortable using command-line tools for this?
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+--- NEW STREAM ---
+Alright, appreciate the straightforwardness. Just a couple more questions:
+
+1.  Do you have any experience working with databases, either relational (like SQL Server, MySQL, PostgreSQL) or NoSQL databases?
+
+2.  Have you ever deployed a web application to a hosting environment (e.g., AWS, Azure, Heroku)?
+
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!
+
+--- NEW STREAM ---
+Okay, this is very helpful. Last questions:
+
+1.  Are you familiar with the concept of LINQ (Language Integrated Query) or similar querying methods in other languages? Also, are you comfortable with lambda expressions?
+
+2.  Have you ever worked on a project that involved testing (unit, integration, or end-to-end testing)?
+
+Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!

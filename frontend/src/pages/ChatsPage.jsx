@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import "../styles/pages.css";
 import { LogoIcon } from "../components/Icons";
 
@@ -20,6 +23,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
   const [chatDisabled, setChatDisabled] = useState(false);
   const [generatedPathId, setGeneratedPathId] = useState(null);
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const messagesEndRef = useRef(null);
   const initialized = useRef(false);
 
@@ -50,17 +54,23 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ goal: `${goal} (${diff}, ${comm})` })
       });
-      triggerBackendChat("HIDDEN_PROMPT: Hello, I am ready to start my assessment. Please ask me questions to gauge my experience.", "setup", [{ role: "user", content: goal }]);
+      triggerBackendChat("HIDDEN_PROMPT: Hello, I am ready to start my assessment. Please ask me questions to gauge my experience. Once we move to the syllabus phase, please format each module as a separate markdown code block for a clean blueprint look.", "setup", [{ role: "user", content: goal }]);
     } catch (e) { console.error(e); }
   };
 
   const triggerBackendChat = async (userText, currentPhase, baseMessages) => {
     setChatDisabled(true);
     setLoading(true);
+    setHasStarted(false);
 
     const currentMessages = baseMessages || messages;
     if (userText && !userText.startsWith("HIDDEN_PROMPT:")) {
-      setMessages(prev => [...prev, { role: "user", content: userText }]);
+      setMessages(prev => [...prev,
+      { role: "user", content: userText },
+      { role: "assistant", content: "" }
+      ]);
+    } else if (userText?.startsWith("HIDDEN_PROMPT:")) {
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
     }
 
     const endpoint = currentPhase === "setup" ? "/api/chat/knowledge-setup" : "/api/chat/generate-path";
@@ -85,12 +95,11 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiMessage = "";
-      let hasStarted = false;
       let lastWordCount = 0;
       let buffer = "";
 
-      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
+      let firstChunkReceived = false;
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -105,7 +114,10 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
           try {
             const data = JSON.parse(dataStr);
             if (data.text) {
-              if (!hasStarted) { hasStarted = true; setLoading(false); }
+              if (!firstChunkReceived) {
+                firstChunkReceived = true;
+                setHasStarted(true);
+              }
               aiMessage += data.text;
               const wc = aiMessage.trim().split(/\s+/).length;
               if (wc === 1 || wc - lastWordCount >= 5) {
@@ -127,7 +139,13 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
         }
       }
     } catch (err) { console.error(err); }
-    finally { setLoading(false); setChatDisabled(false); }
+    finally {
+      // Only stop loading if we aren't immediately starting a new phase
+      if (currentPhase !== "setup") {
+        setLoading(false);
+      }
+      setChatDisabled(false);
+    }
   };
 
   const handleStartChat = (e) => {
@@ -321,7 +339,29 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                   </p>
                 </div>
 
-                {messages.filter(m => !m.content.startsWith("HIDDEN_PROMPT:") && !(m.role === "assistant" && m.content.trim().startsWith("{") && m.content.includes("user_profile")))
+                {/* GENERATING PATH OVERLAY */}
+                {phase === "generate" && loading && !hasStarted && (
+                  <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "24px", padding: "60px 40px", textAlign: "center", marginTop: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", animation: "pulseOpacity 2s infinite ease-in-out" }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+                      <div className="spinner" style={{ width: "48px", height: "48px", borderWidth: "4px" }} />
+                    </div>
+                    <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1e293b", margin: "0 0 12px" }}>Generating Your Neural Map</h2>
+                    <p style={{ color: "#64748b", fontSize: "15px", maxWidth: "400px", margin: "0 auto", lineHeight: "1.6" }}>
+                      We're designing a personalized syllabus based on your profile. This usually takes 5-10 seconds...
+                    </p>
+                  </div>
+                )}
+
+                {messages.filter(m => {
+                  const isHiddenPrompt = m.content.startsWith("HIDDEN_PROMPT:");
+                  const isJsonProfile = m.role === "assistant" && m.content.trim().startsWith("{") && m.content.includes("user_profile");
+                  const isEmptyAssistant = m.role === "assistant" && m.content.trim() === "";
+
+                  // Hide blank bubbles unless they are the active "Thinking" bubble
+                  if (isEmptyAssistant && !loading) return false;
+
+                  return !isHiddenPrompt && !isJsonProfile;
+                })
                   .map((msg, i, arr) => {
                     const isLast = i === arr.length - 1;
                     const isEmpty = msg.role === "assistant" && msg.content === "";
@@ -330,13 +370,36 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                         <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: msg.role === "user" ? "#f1f5f9" : "#5A72F6", color: msg.role === "user" ? "#5A72F6" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "17px" }}>
                           {msg.role === "user" ? "👤" : <LogoIcon />}
                         </div>
-                        <div style={{ background: msg.role === "user" ? "#5A72F6" : "#fff", color: msg.role === "user" ? "#fff" : "#1e293b", padding: "14px 18px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", lineHeight: "1.65", whiteSpace: "pre-wrap", fontSize: "15px", boxShadow: msg.role === "user" ? "0 4px 12px rgba(90,114,246,0.2)" : "0 2px 10px rgba(0,0,0,0.04)", border: msg.role === "user" ? "none" : "1px solid #f1f5f9" }}>
-                          {isEmpty && loading && isLast ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <div className="spinner" style={{ width: "16px", height: "16px", margin: 0 }} />
-                              <span style={{ color: "#94a3b8", fontSize: "14px" }}>{phase === "generate" ? "Building syllabus..." : "Thinking..."}</span>
+                        <div style={{
+                          background: msg.role === "user" ? "#5A72F6" : "#f8fafc",
+                          color: msg.role === "user" ? "#fff" : "#1e293b",
+                          padding: "8px 14px",
+                          borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "0 22px 22px 22px",
+                          fontSize: "15px",
+                          boxShadow: msg.role === "user" ? "0 4px 12px rgba(90,114,246,0.2)" : "none",
+                          border: "none",
+                          minWidth: (isEmpty && loading) ? "110px" : "auto",
+                          display: "flex",
+                          alignItems: "center"
+                        }}>
+                          {((isEmpty || (!hasStarted && isLast)) || (msg.role === "assistant" && msg.content.trim().startsWith("{"))) && loading && msg.role === "assistant" ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div className="spinner" style={{ width: "14px", height: "14px", borderWidth: "2.5px", borderTopColor: "#5A72F6", opacity: 0.8 }} />
+                              <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "400", fontFamily: "inherit" }}>
+                                {phase === "generate" ? "Generating Map..." : "Thinking..."}
+                              </span>
                             </div>
-                          ) : msg.content}
+                          ) : (
+                            <div className="markdown-content">
+                              {msg.role === "user" ? (
+                                <span style={{ color: "#fff" }}>{msg.content}</span>
+                              ) : (
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                  {msg.content}
+                                </ReactMarkdown>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -386,8 +449,10 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                     </form>
                   </>
                 ) : (
-                  <div style={{ textAlign: "center" }}>
-                    <button onClick={() => onFinish(generatedPathId)} style={{ padding: "14px 40px", background: "#5A72F6", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer", boxShadow: "0 4px 16px rgba(90,114,246,0.3)", fontFamily: "inherit" }}>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <button onClick={() => onFinish(generatedPathId)} style={{ padding: "16px 48px", background: "#5A72F6", color: "#fff", border: "none", borderRadius: "14px", fontSize: "17px", fontWeight: "800", cursor: "pointer", boxShadow: "0 8px 24px rgba(90, 114, 246, 0.35)", transition: "all 0.2s", fontFamily: "inherit" }}
+                      onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(90, 114, 246, 0.45)"; }}
+                      onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(90, 114, 246, 0.35)"; }}>
                       ✦ View My New Path
                     </button>
                   </div>

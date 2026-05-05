@@ -1350,27 +1350,6 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                       </div>
                     </div>
 
-                    {/* NEXT IN PATH */}
-                    <div>
-                      <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                        <span style={{ fontSize: "20px" }}>⚓</span> Next in your Path
-                      </h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        {[
-                          { id: "14", title: "Advanced Synaptic Plasticity", sub: "Duration: 45 mins • Practical Exercise", locked: false },
-                          { id: "15", title: "Cognitive Load Theory Applied", sub: "Duration: 1.2 hours • Theoretical Deep-Dive", locked: true }
-                        ].map((item, i) => (
-                          <div key={i} style={{ background: "#fff", padding: "20px 24px", borderRadius: "16px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "20px" }}>
-                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#eff6ff", color: "#0052cc", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "16px" }}>{item.id}</div>
-                            <div style={{ flex: 1 }}>
-                              <h4 style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>{item.title}</h4>
-                              <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>{item.sub}</p>
-                            </div>
-                            <div style={{ fontSize: "20px", color: "#cbd5e1" }}>{item.locked ? "🔒" : "❯"}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
                     {/* DETAILED KNOWLEDGE BREAKDOWN (Integrated real data) */}
                     <div>
@@ -1435,30 +1414,6 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                       <div style={{ fontSize: "14px", fontWeight: "700", opacity: 0.8 }}>— {userStats?.daily_quote?.author || "Dr. Seuss"}</div>
                     </div>
 
-                    {/* STUDY GROUP */}
-                    <div style={{ background: "#fff", borderRadius: "24px", padding: "32px", border: "1px solid #e2e8f0" }}>
-                      <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: "0 0 20px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "16px" }}>👥</span> Study Group
-                      </h3>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "16px" }}>
-                        {[1, 2, 3].map(i => (
-                          <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f1f5f9", border: "2px solid #fff", overflow: "hidden", marginLeft: i > 1 ? "-10px" : 0 }}>
-                            <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="user" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          </div>
-                        ))}
-                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94a3b8", marginLeft: "8px" }}>+14</div>
-                      </div>
-                      <p style={{ fontSize: "13px", color: "#64748b", lineHeight: "1.5", margin: "0 0 24px" }}>
-                        3 of your friends are currently studying <strong style={{ color: "#1e293b" }}>Neural Pathways</strong>.
-                      </p>
-                      <button
-                        style={{ width: "100%", padding: "12px", background: "none", border: "1.5px solid #e2e8f0", borderRadius: "10px", fontSize: "13px", fontWeight: "700", color: "#1e293b", cursor: "pointer", transition: "all 0.2s" }}
-                        onMouseOver={e => { e.currentTarget.style.background = "#f8fafc"; }}
-                        onMouseOut={e => { e.currentTarget.style.background = "none"; }}
-                      >
-                        Join Session
-                      </button>
-                    </div>
 
                   </div>
                 </div>
