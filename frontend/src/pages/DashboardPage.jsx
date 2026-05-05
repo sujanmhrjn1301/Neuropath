@@ -1302,6 +1302,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                       e.stopPropagation();
                                       setSelectedModule(node);
                                       setActiveConfusionId(conf.id);
+                                      setView("progress");
                                     }}
                                     onMouseEnter={(e) => {
                                       e.stopPropagation();
