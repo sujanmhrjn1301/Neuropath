@@ -118,13 +118,16 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const [activeConfusion, setActiveConfusion] = useState(null);
   const [isConfusionResolved, setIsConfusionResolved] = useState(false);
   const [expandedConfusions, setExpandedConfusions] = useState(new Set());
+  const [knowledgeProfile, setKnowledgeProfile] = useState(null);
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
+  const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [allPaths, setAllPaths] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
-  const [view, setView] = useState(pathId ? "map" : "home"); // "home" | "mypaths" | "map" | "progress"
+  const [view, setView] = useState(pathId ? "map" : "home"); // "home" | "mypaths" | "map" | "progress" | "assessment"
   const [activeNode, setActiveNode] = useState(null);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [hoveredConfusionId, setHoveredConfusionId] = useState(null); // Track specific branch hover
+  const [hoveredConfusionId, setHoveredConfusionId] = useState(null);
   const hoverTimeoutRef = useRef(null);
 
   const handleNodeMouseEnter = (node) => {
@@ -227,7 +230,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const checkUnresolvedConfusion = async (moduleId) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://127.0.0.1:8000/api/confusions/unresolved/${moduleId}`, {
+      const res = await fetch(`/api/confusions/unresolved/${moduleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) return;
@@ -246,11 +249,11 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
     if (!currentPath || !selectedModule) return;
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://127.0.0.1:8000/api/learning-paths/${currentPath.id}/graph`, {
+      const res = await fetch(`/api/learning-paths/${currentPath.id}/graph`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setCurrentPath(data);
+      setCurrentPath({ ...data });
 
       const next = data.modules?.find(m => m.order_index === selectedModule.order_index + 1);
       if (next && next.status !== "locked") {
@@ -264,7 +267,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const fetchChatHistory = async (moduleId) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://127.0.0.1:8000/api/modules/${moduleId}/chat`, {
+      const res = await fetch(`/api/modules/${moduleId}/chat`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -298,7 +301,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://127.0.0.1:8000/api/modules/${selectedModule.id}/chat`, {
+      const response = await fetch(`/api/modules/${selectedModule.id}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -349,6 +352,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                   setTimeout(() => {
                     loadSpecificPath(pathIdToRefresh, null, true); // stayOnCurrentView = true
                     fetchAllPaths(); // Sync the global list
+                    fetchUserStats(); // Update the Knowledge Overview stats
                   }, 1000);
                 }
               }
@@ -378,14 +382,52 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const svgRef = useRef(null);
 
   useEffect(() => {
+    if (view === "assessment") {
+      fetchUserStats();
+      fetchKnowledgeProfile();
+    }
+  }, [view]);
+
+  useEffect(() => {
     fetchAllPaths();
     fetchRecommendations();
+    fetchKnowledgeProfile();
+    fetchUserStats();
   }, []);
+
+  const fetchUserStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/stats/overview", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setUserStats(data);
+    } catch (err) {
+      console.error("Failed to fetch stats", err);
+    }
+  };
+
+  const fetchKnowledgeProfile = async () => {
+    try {
+      setIsRefreshingProfile(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/chat/knowledge-summary", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setKnowledgeProfile(data.knowledge_summary);
+    } catch (err) {
+      console.error("Failed to fetch profile", err);
+    } finally {
+      setIsRefreshingProfile(false);
+    }
+  };
 
   const fetchRecommendations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://127.0.0.1:8000/api/recommendations/generate", {
+      const res = await fetch("/api/recommendations/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -417,7 +459,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://127.0.0.1:8000/api/learning-paths", {
+      const res = await fetch("/api/learning-paths", {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -433,11 +475,17 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
     if (!stayOnCurrentView) setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://127.0.0.1:8000/api/learning-paths/${id}/graph`, {
+      const res = await fetch(`/api/learning-paths/${id}/graph?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Failed to load graph");
       const data = await res.json();
+      
+      // DEBUG: Log confusion counts
+      const target = data.modules?.find(m => m.id === selectedModule?.id);
+      if (target) {
+        console.log(`DEBUG: Module '${target.title}' now has ${target.confusions?.length || 0} confusions.`);
+      }
 
       // Safety check: Don't set currentPath if modules are missing
       if (!data.modules || data.modules.length === 0) {
@@ -445,7 +493,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
         return;
       }
 
-      setCurrentPath(data);
+      setCurrentPath({ ...data });
 
       // Resumption logic: targetModuleId > localStorage > first unlocked > first module
       if (!stayOnCurrentView) {
@@ -456,10 +504,15 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
         if (currentModule) setSelectedModule(currentModule);
       } else if (selectedModule) {
-        // Sync the status of the currently selected module if it changed in the background
+        // Sync the status and confusions of the currently selected module
         const updatedSelf = data.modules?.find(m => m.id === selectedModule.id);
-        if (updatedSelf && updatedSelf.status !== selectedModule.status) {
-          setSelectedModule(updatedSelf);
+        if (updatedSelf) {
+          const statusChanged = updatedSelf.status !== selectedModule.status;
+          const confusionsChanged = (updatedSelf.confusions?.length || 0) !== (selectedModule.confusions?.length || 0);
+          
+          if (statusChanged || confusionsChanged) {
+            setSelectedModule(updatedSelf);
+          }
         }
       }
 
@@ -602,7 +655,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
             { id: "home", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, label: "Home" },
             { id: "mypaths", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>, label: "My Paths" },
             { id: "progress", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></svg>, label: "Progress", onClick: handleProgressClick },
-            { id: "assessment", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>, label: "Assessment History" },
+            { id: "assessment", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>, label: "Learning Journey" },
           ].map(item => (
             <div
               key={item.id}
@@ -1142,6 +1195,277 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 )}
               </div>
             </div>
+          ) : view === "assessment" ? (
+            /* NEW PREMIUM KNOWLEDGE PROFILE VIEW */
+            <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "40px", background: "#f1f5f9" }}>
+              <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+
+                {/* TOP HEADER */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                  <div>
+                    <h1 style={{ fontSize: "32px", fontWeight: "800", color: "#1e293b", margin: 0 }}>Your Learning Journey</h1>
+                    <p style={{ color: "#64748b", margin: "4px 0 0 0", fontSize: "16px" }}>You're making incredible progress! Only 4 units left to reach Master status.</p>
+                  </div>
+                  <button
+                    onClick={() => setView("mypaths")}
+                    style={{
+                      background: "#5A72F6",
+                      color: "#fff",
+                      border: "1.5px solid transparent",
+                      borderRadius: "12px",
+                      padding: "12px 28px",
+                      fontSize: "15px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      boxShadow: "0 4px 14px rgba(90, 114, 246, 0.2)",
+                      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxSizing: "border-box"
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = "#fff";
+                      e.currentTarget.style.color = "#5A72F6";
+                      e.currentTarget.style.borderColor = "#5A72F6";
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = "#5A72F6";
+                      e.currentTarget.style.color = "#fff";
+                      e.currentTarget.style.borderColor = "transparent";
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M5 3l14 9-14 9V3z" />
+                    </svg>
+                    Continue Learning
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "32px" }}>
+
+                  {/* MAIN COLUMN */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+
+                    {/* KNOWLEDGE OVERVIEW CARD */}
+                    {(() => {
+                      const masteryPercent = userStats?.mastery_percent || 0;
+                      const totalMastered = userStats?.total_mastered || 0;
+                      const totalPossible = userStats?.total_concepts || 0;
+                      const currentStreak = userStats?.current_streak || 0;
+                      const totalHours = userStats?.total_hours || 0;
+                      const paceDiff = userStats?.pace_comparison || 0;
+
+                      return (
+                        <div style={{ background: "#fff", borderRadius: "24px", padding: "40px", boxShadow: "0 2px 40px rgba(0,0,0,0.03)", display: "grid", gridTemplateColumns: "200px 1fr", gap: "40px", alignItems: "center" }}>
+                          <div style={{ position: "relative", width: "180px", height: "180px" }}>
+                            <svg width="180" height="180" viewBox="0 0 100 100">
+                              <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                              <circle cx="50" cy="50" r="40" fill="none" stroke="#0052cc" strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - (masteryPercent / 100))} strokeLinecap="round" transform="rotate(-90 50 50)" />
+                            </svg>
+                            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                              <span style={{ fontSize: "32px", fontWeight: "800", color: "#1e293b" }}>{masteryPercent}%</span>
+                              <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Mastery</span>
+                            </div>
+                          </div>
+                          <div>
+                            <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", marginBottom: "16px" }}>Knowledge Overview</h2>
+                            <p style={{ color: "#64748b", fontSize: "15px", lineHeight: "1.6", marginBottom: "24px" }}>
+                              You have successfully mastered <strong style={{ color: "#1e293b" }}>{totalMastered} out of {totalPossible}</strong> core concepts in your current curriculum.
+                              {paceDiff > 0 && (
+                                <> Your pace is <strong style={{ color: "#10b981" }}>{paceDiff}% faster</strong> than average learners this month.</>
+                              )}
+                              {paceDiff < 0 && (
+                                <> Your pace is <strong style={{ color: "#ef4444" }}>{Math.abs(paceDiff)}% slower</strong> than average learners. Keep it up!</>
+                              )}
+                              {paceDiff === 0 && (
+                                <> Your pace is <strong style={{ color: "#5A72F6" }}>exactly on track</strong> with average learners.</>
+                              )}
+                            </p>
+                            <div style={{ display: "flex", gap: "32px", marginTop: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ color: "#f59e0b" }}>
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Streak</span>
+                                  <span style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b" }}>{currentStreak} Days</span>
+                                </div>
+                              </div>
+                              <div style={{ width: "1px", height: "30px", background: "#e2e8f0", alignSelf: "center" }} />
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ color: "#5A72F6" }}>
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Time</span>
+                                  <span style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b" }}>{totalHours}h</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ACHIEVEMENTS */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                        <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
+                          Achievements & Milestones
+                        </h3>
+                        <button
+                          style={{ background: "none", border: "none", color: "#5A72F6", fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "color 0.2s" }}
+                          onMouseOver={e => e.currentTarget.style.color = "#4c60d8"}
+                          onMouseOut={e => e.currentTarget.style.color = "#5A72F6"}
+                        >
+                          View All
+                        </button>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+                        {(userStats?.achievements || []).length > 0 ? (
+                          userStats.achievements.map((ach, i) => (
+                            <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: "20px", border: "1px solid #f1f5f9", transition: "all 0.2s" }}>
+                              <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "#f8fafc", color: ach.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                {ach.type === "path" && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>}
+                                {ach.type === "module" && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v11.5L13 22l-7-3h-2" /><path d="M9 18h6" /></svg>}
+                                {ach.type === "streak" && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>}
+                                {ach.type === "mastery" && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>}
+                              </div>
+                              <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "700", color: "#1e293b" }}>{ach.title}</h4>
+                              <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8", lineHeight: "1.4" }}>{ach.sub}</p>
+                            </div>
+                          ))
+                        ) : (
+                          [1, 2, 3].map((_, i) => (
+                            <div key={i} style={{ background: "#fff", padding: "20px", borderRadius: "20px", border: "1px solid #f1f5f9", opacity: 0.5 }}>
+                              <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "#f8fafc", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                              </div>
+                              <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "700", color: "#94a3b8" }}>Locked</h4>
+                              <p style={{ margin: 0, fontSize: "12px", color: "#cbd5e1" }}>Keep learning to unlock</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* NEXT IN PATH */}
+                    <div>
+                      <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                        <span style={{ fontSize: "20px" }}>⚓</span> Next in your Path
+                      </h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {[
+                          { id: "14", title: "Advanced Synaptic Plasticity", sub: "Duration: 45 mins • Practical Exercise", locked: false },
+                          { id: "15", title: "Cognitive Load Theory Applied", sub: "Duration: 1.2 hours • Theoretical Deep-Dive", locked: true }
+                        ].map((item, i) => (
+                          <div key={i} style={{ background: "#fff", padding: "20px 24px", borderRadius: "16px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "20px" }}>
+                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#eff6ff", color: "#0052cc", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "16px" }}>{item.id}</div>
+                            <div style={{ flex: 1 }}>
+                              <h4 style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>{item.title}</h4>
+                              <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>{item.sub}</p>
+                            </div>
+                            <div style={{ fontSize: "20px", color: "#cbd5e1" }}>{item.locked ? "🔒" : "❯"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* DETAILED KNOWLEDGE BREAKDOWN (Integrated real data) */}
+                    <div>
+                      <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#1e293b", marginBottom: "20px" }}>AI Knowledge Breakdown</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                        <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", border: "1px solid #e2e8f0" }}>
+                          <div style={{ color: "#10b981", fontWeight: "800", fontSize: "12px", textTransform: "uppercase", marginBottom: "12px" }}>Core Strengths</div>
+                          <p style={{ margin: 0, fontSize: "14px", color: "#475569", lineHeight: "1.6" }}>{knowledgeProfile?.strengths || "Assessment pending..."}</p>
+                        </div>
+                        <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", border: "1px solid #e2e8f0" }}>
+                          <div style={{ color: "#f59e0b", fontWeight: "800", fontSize: "12px", textTransform: "uppercase", marginBottom: "12px" }}>Growth Areas</div>
+                          <p style={{ margin: 0, fontSize: "14px", color: "#475569", lineHeight: "1.6" }}>{knowledgeProfile?.weaknesses || "Assessment pending..."}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* SIDEBAR COLUMN */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+
+                    {/* RECENTLY COMPLETED */}
+                    <div style={{ background: "#fff", borderRadius: "24px", padding: "32px", border: "1px solid #f1f5f9" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                        <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: 0 }}>Recently Completed</h3>
+                        <div style={{ color: "#94a3b8" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                        {(userStats?.recently_completed || []).length > 0 ? (
+                          userStats.recently_completed.map((item, i) => (
+                            <div key={i} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                              <div style={{ color: "#10b981", marginTop: "2px" }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b", lineHeight: "1.2" }}>{item.title}</div>
+                                <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>{item.date} • {item.score} Score</div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", margin: "20px 0" }}>No modules completed yet.</p>
+                        )}
+                      </div>
+                      <button
+                        style={{ width: "100%", marginTop: "32px", padding: "12px", background: "none", border: "1px solid #f1f5f9", borderRadius: "12px", fontSize: "13px", fontWeight: "700", color: "#64748b", cursor: "pointer", transition: "all 0.2s" }}
+                        onMouseOver={e => { e.currentTarget.style.background = "#f8fafc"; }}
+                        onMouseOut={e => { e.currentTarget.style.background = "none"; }}
+                      >
+                        View Learning History
+                      </button>
+                    </div>
+
+                    {/* QUOTE CARD */}
+                    <div style={{ background: "linear-gradient(135deg, #0052cc 0%, #003d99 100%)", borderRadius: "24px", padding: "32px", color: "#fff", position: "relative" }}>
+                      <div style={{ fontSize: "40px", opacity: 0.3, position: "absolute", top: "20px", left: "20px", fontFamily: "serif" }}>“</div>
+                      <p style={{ fontSize: "18px", fontWeight: "600", lineHeight: "1.6", margin: "20px 0 24px", position: "relative", zIndex: 1 }}>
+                        "{userStats?.daily_quote?.text || "The more that you read, the more things you will know. The more that you learn, the more places you'll go."}"
+                      </p>
+                      <div style={{ fontSize: "14px", fontWeight: "700", opacity: 0.8 }}>— {userStats?.daily_quote?.author || "Dr. Seuss"}</div>
+                    </div>
+
+                    {/* STUDY GROUP */}
+                    <div style={{ background: "#fff", borderRadius: "24px", padding: "32px", border: "1px solid #e2e8f0" }}>
+                      <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1e293b", margin: "0 0 20px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "16px" }}>👥</span> Study Group
+                      </h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "16px" }}>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f1f5f9", border: "2px solid #fff", overflow: "hidden", marginLeft: i > 1 ? "-10px" : 0 }}>
+                            <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="user" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          </div>
+                        ))}
+                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#94a3b8", marginLeft: "8px" }}>+14</div>
+                      </div>
+                      <p style={{ fontSize: "13px", color: "#64748b", lineHeight: "1.5", margin: "0 0 24px" }}>
+                        3 of your friends are currently studying <strong style={{ color: "#1e293b" }}>Neural Pathways</strong>.
+                      </p>
+                      <button
+                        style={{ width: "100%", padding: "12px", background: "none", border: "1.5px solid #e2e8f0", borderRadius: "10px", fontSize: "13px", fontWeight: "700", color: "#1e293b", cursor: "pointer", transition: "all 0.2s" }}
+                        onMouseOver={e => { e.currentTarget.style.background = "#f8fafc"; }}
+                        onMouseOut={e => { e.currentTarget.style.background = "none"; }}
+                      >
+                        Join Session
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div style={{ height: "40px" }} />
+              </div>
+            </div>
           ) : view === "map" ? (
             /* MAP VIEW (Canvas) */
             <div
@@ -1296,8 +1620,8 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                     <animate attributeName="stroke-dashoffset" from="20" to="0" dur="3s" repeatCount="indefinite" />
                                   </line>
 
-                                  <g 
-                                    style={{ cursor: "pointer" }} 
+                                  <g
+                                    style={{ cursor: "pointer" }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedModule(node);
@@ -1312,7 +1636,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                     onMouseLeave={() => setHoveredConfusionId(null)}
                                   >
                                     <circle
-                                      cx={cx} cy={cy} 
+                                      cx={cx} cy={cy}
                                       r={Math.max(8, (16 - level * 3) + Math.min(25, (conf.message_count || 0) * 2))}
                                       fill={conf.status === "resolved" ? "#10b981" : "#5A72F6"}
                                       stroke="#fff" strokeWidth="2.5"
@@ -1325,15 +1649,15 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                   <text
                                     x={cx} y={cy + (level === 0 ? 28 : 18)}
                                     textAnchor="middle" fontSize={Math.max(8, 11 - level)} fontWeight="800" fill="#475569"
-                                    style={{ 
-                                      pointerEvents: "none", 
-                                      opacity: hoveredConfusionId === conf.id ? 1 : 0, 
-                                      transition: "opacity 0.2s", 
-                                      paintOrder: "stroke", 
-                                      stroke: "#fff", 
-                                      strokeWidth: "3px", 
-                                      strokeLinecap: "round", 
-                                      strokeLinejoin: "round" 
+                                    style={{
+                                      pointerEvents: "none",
+                                      opacity: hoveredConfusionId === conf.id ? 1 : 0,
+                                      transition: "opacity 0.2s",
+                                      paintOrder: "stroke",
+                                      stroke: "#fff",
+                                      strokeWidth: "3px",
+                                      strokeLinecap: "round",
+                                      strokeLinejoin: "round"
                                     }}
                                   >
                                     {conf.title}
@@ -1789,13 +2113,58 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                     disabled={loading || activeConfusion}
                     rootModuleId={selectedModule?.id}
                     token={localStorage.getItem("token")}
-                    onConfusionStarted={(nodeId) => {
-                      checkUnresolvedConfusion(selectedModule.id);
-                      setActiveConfusionId(nodeId);
-                      // Refresh roadmap silently to show the new node
+                    onConfusionStarted={(node) => {
+                      console.log("DEBUG: Side-quest started, injecting into local state...");
+                      
+                      // 1. Manually update currentPath modules to show pill instantly
                       if (currentPath) {
-                        loadSpecificPath(currentPath.id, selectedModule.id, true);
+                        const updatedModules = currentPath.modules.map(m => {
+                          if (m.id === selectedModule.id) {
+                            const newConfusion = {
+                              id: node.id,
+                              title: node.title || "Side-Quest",
+                              status: "active",
+                              message_count: 0
+                            };
+                            return {
+                              ...m,
+                              confusions: [...(m.confusions || []), newConfusion]
+                            };
+                          }
+                          return m;
+                        });
+                        
+                        setCurrentPath({
+                          ...currentPath,
+                          modules: updatedModules
+                        });
+
+                        // 2. ALSO inject the placeholder into the main chat history
+                        const questPlaceholder = {
+                          id: Date.now(),
+                          role: "side_quest",
+                          content: `Side-quest was created [/confusion/${node.id}]`,
+                          created_at: new Date().toISOString()
+                        };
+                        setChatMessages(prev => [...prev, questPlaceholder]);
                       }
+
+                      checkUnresolvedConfusion(selectedModule.id);
+                      setActiveConfusionId(node.id);
+                      
+                      // 2. Auto-expand the deep dives section for this module
+                      setExpandedConfusions(prev => {
+                        const next = new Set(prev);
+                        next.add(selectedModule.id);
+                        return next;
+                      });
+                      
+                      // 3. Still trigger a background refresh to be 100% sure
+                      setTimeout(() => {
+                        if (currentPath) {
+                          loadSpecificPath(currentPath.id, selectedModule.id, true);
+                        }
+                      }, 1000);
                     }}
                   >
                     {activeConfusionId ? (

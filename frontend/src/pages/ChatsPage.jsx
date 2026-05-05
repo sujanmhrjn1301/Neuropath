@@ -36,7 +36,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://127.0.0.1:8000/api/learning-paths", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("/api/learning-paths", { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setHistory(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }
@@ -45,7 +45,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
   const initChat = async (goal, diff, comm) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch("http://127.0.0.1:8000/api/auth/me/goal", {
+      await fetch("/api/auth/me/goal", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ goal: `${goal} (${diff}, ${comm})` })
@@ -75,7 +75,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
     if (finalUserText) requestMessages.push({ role: "user", content: finalUserText });
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+      const response = await fetch(`${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ messages: requestMessages, provider: "openrouter", use_openrouter: true, debug_mode: isDebugMode })
@@ -155,8 +155,8 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
   const formatDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   const sidebarItems = [
-    { id: "dashboard", label: "Home", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-    { id: "chats", label: "Chats", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, active: true },
+    { id: "dashboard", label: "Home", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg> },
+    { id: "chats", label: "Chats", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>, active: true },
   ];
 
   return (
@@ -191,7 +191,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
           )}
           <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#94a3b8", flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
         </div>
@@ -235,7 +235,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
             style={{ width: "100%", background: "none", border: "none", cursor: "pointer", justifyContent: isSidebarCollapsed ? "center" : "flex-start", padding: isSidebarCollapsed ? "10px 0" : "10px 14px", gap: "10px", borderRadius: "10px", color: "#64748b", fontSize: "14px", display: "flex", alignItems: "center", fontFamily: "inherit", transition: "all 0.2s" }}
             onMouseOver={e => { e.currentTarget.style.background = "#fff1f2"; e.currentTarget.style.color = "#e11d48"; }}
             onMouseOut={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#64748b"; }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
             {!isSidebarCollapsed && <span>Logout</span>}
           </button>
         </div>
@@ -381,7 +381,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                         onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }} />
                       <button type="submit" disabled={chatDisabled || !inputValue.trim()}
                         style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: (chatDisabled || !inputValue.trim()) ? "#f1f5f9" : "#5A72F6", color: (chatDisabled || !inputValue.trim()) ? "#94a3b8" : "#fff", border: "none", borderRadius: "10px", width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", cursor: (chatDisabled || !inputValue.trim()) ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
                       </button>
                     </form>
                   </>

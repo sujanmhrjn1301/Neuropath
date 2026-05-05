@@ -134,8 +134,7 @@ def spawn_confusion(
         placeholder = ModuleChatMessage(
             module_id=request.root_module_id,
             role="side_quest",
-            content=f"Side-quest was created [/confusion/{node.id}]",
-            confusion_node_id=node.id
+            content=f"Side-quest was created [/confusion/{node.id}]"
         )
         db.add(placeholder)
 

@@ -30,7 +30,7 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
       // 1. Update Goal in DB
       try {
         const token = localStorage.getItem('token');
-        await fetch('http://127.0.0.1:8000/api/auth/me/goal', {
+        await fetch('/api/auth/me/goal', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
         requestMessages.push({ role: "user", content: finalUserText });
       }
 
-      const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+      const response = await fetch(`${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

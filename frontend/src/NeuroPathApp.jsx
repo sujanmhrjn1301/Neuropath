@@ -28,7 +28,7 @@ export default function App() {
 
   async function fetchUser(token) {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/auth/me", {
+      const res = await fetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -157,7 +157,7 @@ export default function App() {
         <DashboardPage
           pathId={activePathId}
           onLogout={goToLogin}
-          onNewPath={() => goToChats()}
+          onNewPath={() => goToMain()}
           onGeneratePath={(title) => goToChats(title, "Intermediate", "30 - 60 mins (Steady)")}
           onUpdateKnowledge={() => goToChats()}
           user={user}

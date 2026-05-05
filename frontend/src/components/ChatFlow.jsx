@@ -15,7 +15,7 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
   const [loading, setLoading] = useState(false);
   const [chatDisabled, setChatDisabled] = useState(false);
   const [generatedPathId, setGeneratedPathId] = useState(null);
-  
+
   const messagesEndRef = useRef(null);
   const initialized = useRef(false);
 
@@ -31,7 +31,7 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
   const initChat = async (goal, diff, comm) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch("http://127.0.0.1:8000/api/auth/me/goal", {
+      await fetch("/api/auth/me/goal", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ goal: `${goal} (${diff}, ${comm})` })
@@ -61,7 +61,7 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
     if (finalUserText) requestMessages.push({ role: "user", content: finalUserText });
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+      const response = await fetch(`${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ messages: requestMessages, provider: "openrouter", use_openrouter: true, debug_mode: isDebugMode })
@@ -173,8 +173,10 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
                   <div style={{ display: "flex" }}>
                     {["Beginner", "Intermediate", "Expert"].map((d, i) => (
                       <button key={d} type="button" onClick={() => setDifficulty(d)}
-                        style={{ flex: 1, padding: "10px 0", border: "1.5px solid #e2e8f0", background: difficulty === d ? "#eff6ff" : "#fff", color: difficulty === d ? "#5A72F6" : "#64748b", fontSize: "13px", fontWeight: difficulty === d ? "600" : "400", cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
-                          borderRadius: i === 0 ? "8px 0 0 8px" : i === 2 ? "0 8px 8px 0" : "0", marginRight: i < 2 ? "-1px" : "0", zIndex: difficulty === d ? 1 : 0, position: "relative" }}>
+                        style={{
+                          flex: 1, padding: "10px 0", border: "1.5px solid #e2e8f0", background: difficulty === d ? "#eff6ff" : "#fff", color: difficulty === d ? "#5A72F6" : "#64748b", fontSize: "13px", fontWeight: difficulty === d ? "600" : "400", cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
+                          borderRadius: i === 0 ? "8px 0 0 8px" : i === 2 ? "0 8px 8px 0" : "0", marginRight: i < 2 ? "-1px" : "0", zIndex: difficulty === d ? 1 : 0, position: "relative"
+                        }}>
                         {d}
                       </button>
                     ))}
@@ -248,7 +250,7 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
                     onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }} />
                   <button type="submit" disabled={chatDisabled || !inputValue.trim()}
                     style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: (chatDisabled || !inputValue.trim()) ? "#f1f5f9" : "#5A72F6", color: (chatDisabled || !inputValue.trim()) ? "#94a3b8" : "#fff", border: "none", borderRadius: "10px", width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", cursor: (chatDisabled || !inputValue.trim()) ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
                   </button>
                 </form>
               ) : (

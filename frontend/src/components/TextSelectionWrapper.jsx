@@ -127,7 +127,7 @@ const TextSelectionWrapper = ({ children, disabled, rootModuleId, parentConfusio
             setQuestion('');
 
             if (onConfusionStarted) {
-                onConfusionStarted(data.id);
+                onConfusionStarted(data);
             } else {
                 window.location.href = `/confusion/${data.id}`;
             }

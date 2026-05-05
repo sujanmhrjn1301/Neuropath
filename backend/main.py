@@ -150,7 +150,7 @@ admin.add_view(ModuleChatMessageAdmin)
 admin.add_view(ConfusionNodeAdmin)
 admin.add_view(ConfusionChatMessageAdmin)
 
-from .routers import auth, chat, learning, learning_chat, confusion, confusion_chat, recommendations, syllabus
+from .routers import auth, chat, learning, learning_chat, confusion, confusion_chat, recommendations, syllabus, stats
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(learning.router)
@@ -159,6 +159,7 @@ app.include_router(confusion.router)
 app.include_router(confusion_chat.router)
 app.include_router(recommendations.router)
 app.include_router(syllabus.router)
+app.include_router(stats.router)
 
 @app.get("/")
 def root():
