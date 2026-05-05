@@ -123,6 +123,8 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const [currentPath, setCurrentPath] = useState(null);
   const [view, setView] = useState(pathId ? "map" : "home"); // "home" | "mypaths" | "map" | "progress"
   const [activeNode, setActiveNode] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [hoveredConfusionId, setHoveredConfusionId] = useState(null); // Track specific branch hover
   const hoverTimeoutRef = useRef(null);
 
   const handleNodeMouseEnter = (node) => {
@@ -436,13 +438,13 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
       });
       if (!res.ok) throw new Error("Failed to load graph");
       const data = await res.json();
-      
+
       // Safety check: Don't set currentPath if modules are missing
       if (!data.modules || data.modules.length === 0) {
         console.warn("Received empty or invalid path graph", data);
         return;
       }
-      
+
       setCurrentPath(data);
 
       // Resumption logic: targetModuleId > localStorage > first unlocked > first module
@@ -1190,8 +1192,14 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           transformOrigin: `${node.x}px ${node.y}px`,
                           transition: "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
                         }}
-                        onMouseEnter={() => handleNodeMouseEnter(node)}
-                        onMouseLeave={handleNodeMouseLeave}
+                        onMouseEnter={() => {
+                          handleNodeMouseEnter(node);
+                          setShowTooltip(true);
+                        }}
+                        onMouseLeave={() => {
+                          handleNodeMouseLeave();
+                          setShowTooltip(false);
+                        }}
                         onClick={() => !isLocked && handleNodeClick(node)}
                       >
                         {/* Ripple Effect for Unlocked Nodes */}
@@ -1248,6 +1256,98 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                             </svg>
                           </g>
                         )}
+
+                        {/* Visual Tree Branching (Strict 3-2-2 Structure) */}
+                        {node.confusions && node.confusions.length > 0 && !isLocked && (() => {
+                          // Manually structure flat confusions into a visual 3-2-2 tree
+                          const buildTree = (list) => {
+                            const flat = [...list];
+                            const tree = flat.splice(0, 3).map(root => {
+                              const children = flat.splice(0, 2).map(child => {
+                                return { ...child, children: flat.splice(0, 2) };
+                              });
+                              return { ...root, children };
+                            });
+                            return tree;
+                          };
+
+                          const visualTree = buildTree(node.confusions);
+
+                          const renderRecursiveBranches = (px, py, baseAngle, children, level = 0) => {
+                            return children.map((conf, cIdx) => {
+                              const spread = level === 0 ? Math.PI / 2 : Math.PI / 3;
+                              const offset = (cIdx - (children.length - 1) / 2) * (spread / Math.max(children.length, 1));
+                              const angle = baseAngle + offset;
+
+                              const dist = level === 0 ? 120 : 70;
+                              const cx = px + Math.cos(angle) * dist;
+                              const cy = py + Math.sin(angle) * dist;
+                              const isConfSelected = activeConfusionId === conf.id;
+
+                              return (
+                                <g key={conf.id}>
+                                  <line
+                                    x1={px} y1={py} x2={cx} y2={cy}
+                                    stroke={conf.status === "resolved" ? "#10b981" : "#5A72F6"}
+                                    strokeWidth={Math.max(1.5, 4 - level * 1.5)}
+                                    strokeDasharray="4,4"
+                                    opacity={Math.max(0.4, 0.9 - level * 0.25)}
+                                  >
+                                    <animate attributeName="stroke-dashoffset" from="20" to="0" dur="3s" repeatCount="indefinite" />
+                                  </line>
+
+                                  <g 
+                                    style={{ cursor: "pointer" }} 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedModule(node);
+                                      setActiveConfusionId(conf.id);
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.stopPropagation();
+                                      setShowTooltip(false);
+                                      setHoveredConfusionId(conf.id);
+                                    }}
+                                    onMouseLeave={() => setHoveredConfusionId(null)}
+                                  >
+                                    <circle
+                                      cx={cx} cy={cy} 
+                                      r={Math.max(8, (16 - level * 3) + Math.min(25, (conf.message_count || 0) * 2))}
+                                      fill={conf.status === "resolved" ? "#10b981" : "#5A72F6"}
+                                      stroke="#fff" strokeWidth="2.5"
+                                      style={{ filter: isConfSelected ? "drop-shadow(0 0 15px rgba(90,114,246,0.5))" : "none", transition: "all 0.3s" }}
+                                    />
+                                  </g>
+
+                                  {conf.children && renderRecursiveBranches(cx, cy, angle, conf.children, level + 1)}
+
+                                  <text
+                                    x={cx} y={cy + (level === 0 ? 28 : 18)}
+                                    textAnchor="middle" fontSize={Math.max(8, 11 - level)} fontWeight="800" fill="#475569"
+                                    style={{ 
+                                      pointerEvents: "none", 
+                                      opacity: hoveredConfusionId === conf.id ? 1 : 0, 
+                                      transition: "opacity 0.2s", 
+                                      paintOrder: "stroke", 
+                                      stroke: "#fff", 
+                                      strokeWidth: "3px", 
+                                      strokeLinecap: "round", 
+                                      strokeLinejoin: "round" 
+                                    }}
+                                  >
+                                    {conf.title}
+                                  </text>
+                                </g>
+                              );
+                            });
+                          };
+
+                          return (
+                            <g>
+                              {renderRecursiveBranches(node.x, node.y, Math.atan2(node.y, node.x), visualTree, 0)}
+                            </g>
+                          );
+                        })()}
 
                         {/* Minimal Label Below Node */}
                         <text
@@ -1315,7 +1415,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
               </div>
 
               {/* Tooltip Card (Smart Positioning) */}
-              {activeNode && (() => {
+              {activeNode && showTooltip && (() => {
                 const nodeScreenY = offset.y + (svgRef.current?.clientHeight || 600) / 2 + activeNode.y * zoom;
                 const showBelow = nodeScreenY < 240; // Flip if too close to top
 
@@ -1344,7 +1444,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                     }}>
                     <div style={{ pointerEvents: "none" }}>
                       <h4 style={{ margin: "0", fontSize: "15px", fontWeight: "800", color: "#1e293b" }}>Topic: {activeNode.title}</h4>
-                      <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#94a3b8", fontWeight: "500" }}>6 lessons • 45 mins</p>
+                      <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#94a3b8", fontWeight: "500" }}>Lesson Module</p>
                     </div>
 
                     {activeNode.status !== "locked" && (
@@ -1484,7 +1584,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                               height: "22px"
                             }} />
                             {/* Toggle Button - Premium Redesign */}
-                            <div 
+                            <div
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setExpandedConfusions(prev => {
@@ -1523,9 +1623,9 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                 e.currentTarget.style.boxShadow = expandedConfusions.has(mod.id) ? "0 4px 12px rgba(90, 114, 246, 0.1)" : "none";
                               }}
                             >
-                              <div style={{ 
-                                display: "flex", 
-                                alignItems: "center", 
+                              <div style={{
+                                display: "flex",
+                                alignItems: "center",
                                 justifyContent: "center",
                                 width: "18px",
                                 height: "18px",
@@ -1534,16 +1634,16 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                 color: expandedConfusions.has(mod.id) ? "#fff" : "#5A72F6",
                                 transition: "all 0.3s"
                               }}>
-                                <svg 
-                                  width="10" 
-                                  height="10" 
-                                  viewBox="0 0 24 24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="3" 
-                                  strokeLinecap="round" 
+                                <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  style={{ 
+                                  style={{
                                     transform: expandedConfusions.has(mod.id) ? "rotate(90deg)" : "rotate(0deg)",
                                     transition: "transform 0.3s"
                                   }}
@@ -1552,9 +1652,9 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                 </svg>
                               </div>
                               <span>Deep Dives</span>
-                              <span style={{ 
-                                background: expandedConfusions.has(mod.id) ? "rgba(255,255,255,0.2)" : "rgba(90, 114, 246, 0.1)", 
-                                padding: "2px 6px", 
+                              <span style={{
+                                background: expandedConfusions.has(mod.id) ? "rgba(255,255,255,0.2)" : "rgba(90, 114, 246, 0.1)",
+                                padding: "2px 6px",
                                 borderRadius: "6px",
                                 marginLeft: "4px"
                               }}>
@@ -1607,9 +1707,9 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                       </svg>
                                     </div>
-                                    <div style={{ 
-                                      fontSize: "11px", 
-                                      fontWeight: activeConfusionId === conf.id ? "700" : "500", 
+                                    <div style={{
+                                      fontSize: "11px",
+                                      fontWeight: activeConfusionId === conf.id ? "700" : "500",
                                       color: activeConfusionId === conf.id ? "#5A72F6" : "#64748b",
                                       whiteSpace: "nowrap",
                                       overflow: "hidden",
@@ -1653,28 +1753,28 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#1e293b", marginBottom: "0px", lineHeight: "1.2" }}>{selectedModule?.title}</h3>
-                      {selectedModule?.status === "completed" && (
-                        <div style={{
-                          padding: "4px 10px",
-                          borderRadius: "20px",
-                          background: "rgba(16, 185, 129, 0.1)",
-                          color: "#10b981",
-                          fontSize: "10px",
-                          fontWeight: "800",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          border: "1px solid rgba(16, 185, 129, 0.2)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px"
-                        }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                          Completed
-                        </div>
-                      )}
-                    </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#1e293b", marginBottom: "0px", lineHeight: "1.2" }}>{selectedModule?.title}</h3>
+                        {selectedModule?.status === "completed" && (
+                          <div style={{
+                            padding: "4px 10px",
+                            borderRadius: "20px",
+                            background: "rgba(16, 185, 129, 0.1)",
+                            color: "#10b981",
+                            fontSize: "10px",
+                            fontWeight: "800",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            border: "1px solid rgba(16, 185, 129, 0.2)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            Completed
+                          </div>
+                        )}
+                      </div>
                       <p style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.5", maxWidth: "800px" }}>
                         {selectedModule?.instructional_goal || "Explore the core concepts and practical applications of this topic with interactive AI guidance."}
                       </p>
@@ -1711,16 +1811,16 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                       <>
                         {chatMessages.map((msg, idx) => {
                           const isSideQuest = msg.role === "side_quest" || (msg.role === "system" && msg.content.includes("/confusion/"));
-                          
+
                           if (isSideQuest) {
                             // Extract title if possible, or use default
-                            const displayTitle = msg.content.includes("Side-Quest Summary") 
-                              ? "Side-Quest Resolved" 
+                            const displayTitle = msg.content.includes("Side-Quest Summary")
+                              ? "Side-Quest Resolved"
                               : "Side-Quest Started";
 
                             return (
                               <div key={idx} style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
-                                <div 
+                                <div
                                   onClick={() => {
                                     if (msg.confusion_node_id) setActiveConfusionId(msg.confusion_node_id);
                                     else {

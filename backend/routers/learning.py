@@ -135,7 +135,8 @@ def get_path_graph(
                 id=c.id, 
                 title=c.title or "Side-Quest", 
                 status=c.status,
-                parent_confusion_id=c.parent_confusion_id
+                parent_confusion_id=c.parent_confusion_id,
+                message_count=len(c.chat_messages)
             ) for c in confusions
         ]
         
