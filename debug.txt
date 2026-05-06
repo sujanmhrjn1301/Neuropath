@@ -1320,3 +1320,14 @@ Okay, that's a perfect starting point! Let's build from there.
 
 --- NEW STREAM ---
 Alright. It seems we're at a very early stage of understanding. Let's establish a baseline and move forward.
+
+
+--- NEW STREAM ---
+Understood. To start, let's explore your existing understanding of networking, as that is a foundational component of ethical hacking.
+
+1.  Have you ever configured a home or small business network, including setting up a router, firewall rules, or DHCP server?
+
+2.  What is your familiarity with common network protocols like TCP/IP, HTTP, DNS, and SSH? Have you worked with them directly, even in a basic troubleshooting capacity?
+
+3.  Do you understand the OSI model and the different layers involved in network communication?
+
