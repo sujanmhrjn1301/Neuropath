@@ -1331,3 +1331,76 @@ Understood. To start, let's explore your existing understanding of networking, a
 
 3.  Do you understand the OSI model and the different layers involved in network communication?
 
+
+
+--- NEW STREAM ---
+Okay, great. Let's begin by exploring your experience with applying visual design principles in practical scenarios, particularly related to user interfaces and information architecture.
+
+1.  Can you describe a project where you significantly improved the user interface through the application of visual design principles? What specific principles did you focus on and what was the measurable impact?
+
+2.  How familiar are you with using Gestalt principles in UI design to improve usability and user experience? Can you give me an example of how you've applied them?
+
+3.  Have you worked on projects that required you to optimize visual hierarchy for complex information architecture? If so, could you elaborate on the techniques you used and the challenges you faced?
+
+
+--- NEW STREAM ---
+Okay, great. To start, let's assess your current understanding of personal finance and budgeting.
+
+1.  Have you ever used budgeting software or apps like Mint, YNAB (You Need a Budget), or Personal Capital? If so, what features did you find most helpful or challenging?
+
+2.  Can you describe your experience with tracking your income and expenses? Have you used spreadsheets, manual methods, or automated tools?
+
+3.  How familiar are you with different types of investment accounts, such as 401(k)s, IRAs, or taxable brokerage accounts?
+
+
+--- NEW STREAM ---
+Understood. To start, let's assess your current understanding of personal finance and budgeting.
+
+1.  Could you describe your experience with budgeting? Have you used any specific methods like the 50/30/20 rule, zero-based budgeting, or envelope budgeting?
+
+2.  What tools or software have you used for tracking your income and expenses (e.g., spreadsheets, Mint, YNAB)?
+
+3.  On a scale of 1 to 5 (5 being expert), how familiar are you with the concept of compound interest and its impact on savings and debt?
+
+
+
+--- NEW STREAM ---
+Understood. To start, let's explore your current understanding of finance and investment, specifically within the context of Nepal:
+
+1.  Have you engaged in any personal investment activities, such as stocks, mutual funds, or fixed deposits, within Nepal's financial system? If so, can you describe your experience?
+
+2.  Are you familiar with the major financial institutions (banks, microfinance, insurance companies) operating in Nepal and their roles in investment and financing activities?
+
+3.  Have you followed any news or reports about the economic conditions, investment climate, or regulatory changes in Nepal that might affect financing and investment decisions?
+
+
+--- NEW STREAM ---
+Okay, great. To start, let's explore your current understanding of finance and investment, particularly in the context of Nepal.
+
+1.  Are you familiar with any specific investment options available in Nepal (e.g., stocks, mutual funds, real estate, fixed deposits)? If so, could you describe your experience or knowledge level with each?
+
+2.  Do you have any experience with financial analysis, such as evaluating financial statements or calculating investment returns?
+
+3.  Are you aware of any specific regulations or legal frameworks governing finance and investment in Nepal?
+
+Specifically, I'm trying to figure out if you are familiar with Nepal's unique financial environment, so any details you can share will be helpful.
+
+
+--- NEW STREAM ---
+Okay, great. To start, let's understand your current familiarity with finance and investment concepts, specifically within the context of Nepal.
+
+1.  Have you engaged with any investment platforms or financial institutions in Nepal, even for basic banking or savings?
+
+2.  Are you familiar with any specific financial regulations or policies unique to Nepal's economy?
+
+3.  Have you researched or followed any particular investment sectors or industries within Nepal (e.g., hydropower, tourism, agriculture)?
+
+
+--- NEW STREAM ---
+Understood. To start, let's explore your current photography experience and knowledge.
+
+1.  Could you describe your familiarity with different camera types (e.g., DSLR, mirrorless, point-and-shoot, smartphone)? Have you used any of these extensively?
+
+2.  How comfortable are you with basic photographic principles like aperture, shutter speed, and ISO? Have you experimented with these settings in manual mode?
+
+3.  What kind of photography most interests you (e.g., portraits, landscapes, street photography, macro)? Do you have any experience in that specific area?

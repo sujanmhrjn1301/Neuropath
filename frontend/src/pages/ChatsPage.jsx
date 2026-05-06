@@ -5,7 +5,7 @@ import remarkBreaks from "remark-breaks";
 import "../styles/pages.css";
 import { LogoIcon } from "../components/Icons";
 
-export default function ChatsPage({ initialGoal, initialDifficulty, initialCommitment, onFinish, onLogout, user }) {
+export default function ChatsPage({ initialGoal, initialDifficulty, initialCommitment, onFinish, onLogout, user, metadata }) {
   // -- History --
   const [history, setHistory] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -161,10 +161,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
       }
     } catch (err) { console.error(err); }
     finally {
-      // Only stop loading if we aren't immediately starting a new phase
-      if (currentPhase !== "setup") {
-        setLoading(false);
-      }
+      setLoading(false);
       setChatDisabled(false);
     }
   };
@@ -316,8 +313,25 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
               </svg>
               Dashboard
             </button>
-            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#5A72F6", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, fontWeight: "600", fontSize: "14px", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(90, 114, 246, 0.2)" }} title={user?.name || "User"}>
-              {user?.name?.charAt(0).toUpperCase() || "U"}
+            <div style={{ 
+              width: "36px", 
+              height: "36px", 
+              borderRadius: "50%", 
+              background: "#f8fafc", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              color: "#fff", 
+              flexShrink: 0, 
+              fontWeight: "600", 
+              fontSize: "14px", 
+              cursor: "pointer", 
+              transition: "all 0.2s", 
+              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+              overflow: "hidden",
+              border: "1px solid #e2e8f0"
+            }} title={user?.name || "User"}>
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "95%", height: "95%" }} />
             </div>
           </div>
         </header>
@@ -388,8 +402,23 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                     const isEmpty = msg.role === "assistant" && msg.content === "";
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "flex-end", gap: "12px", alignSelf: msg.role === "user" ? "flex-end" : "flex-start", flexDirection: msg.role === "user" ? "row-reverse" : "row", maxWidth: "85%" }}>
-                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: msg.role === "user" ? "#f1f5f9" : "#5A72F6", color: msg.role === "user" ? "#5A72F6" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "17px" }}>
-                          {msg.role === "user" ? "👤" : <LogoIcon />}
+                        <div style={{ 
+                          width: "36px", 
+                          height: "36px", 
+                          borderRadius: "50%", 
+                          background: msg.role === "user" ? "#f8fafc" : "#5A72F6", 
+                          color: msg.role === "user" ? "#5A72F6" : "#fff", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center", 
+                          flexShrink: 0, 
+                          fontSize: "17px",
+                          overflow: "hidden",
+                          border: msg.role === "user" ? "1px solid #e2e8f0" : "none"
+                        }}>
+                          {msg.role === "user" ? (
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "95%", height: "95%" }} />
+                          ) : <LogoIcon />}
                         </div>
                         <div style={{
                           background: msg.role === "user" ? "#5A72F6" : "#f8fafc",

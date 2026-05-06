@@ -13,12 +13,50 @@ import HowItWorksPage from "./pages/HowItWorksPage";
 
 /* ─────────────────────────── ROOT APP ─────────────────────────── */
 export default function App() {
-  const [page, setPage] = useState("landing");   // "landing" | "main" | "login" | "signup" | "setup-chat" | "chats" | "dashboard" | "pricing" | "about" | "features" | "how"
-  const [prefillGoal, setPrefillGoal] = useState("");
-  const [setupChatData, setSetupChatData] = useState(null);
-  const [chatsData, setChatsData] = useState(null);
-  const [activePathId, setActivePathId] = useState(null);
+  const [page, setPage] = useState(() => {
+    const saved = localStorage.getItem("np_page") || "landing";
+    const token = localStorage.getItem("token");
+    const protectedPages = ["main", "chats", "setup-chat", "dashboard"];
+    if (protectedPages.includes(saved) && !token) return "landing";
+    return saved;
+  });
+  const [prefillGoal, setPrefillGoal] = useState(() => localStorage.getItem("np_prefillGoal") || "");
+  const [setupChatData, setSetupChatData] = useState(() => {
+    const saved = localStorage.getItem("np_setupChatData");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [chatsData, setChatsData] = useState(() => {
+    const saved = localStorage.getItem("np_chatsData");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [activePathId, setActivePathId] = useState(() => localStorage.getItem("np_activePathId"));
   const [user, setUser] = useState(null);
+  const [metadata, setMetadata] = useState({
+    role: "Senior Cognitive Engineer",
+    bio: "",
+    avatar_seed: "default",
+    course_updates: true,
+    community_mentions: false,
+    marketing_research: true,
+    public_profile: true,
+    data_anonymization: true
+  });
+
+  // Sync state to localStorage
+  useEffect(() => { localStorage.setItem("np_page", page); }, [page]);
+  useEffect(() => { localStorage.setItem("np_prefillGoal", prefillGoal); }, [prefillGoal]);
+  useEffect(() => { 
+    if (setupChatData) localStorage.setItem("np_setupChatData", JSON.stringify(setupChatData));
+    else localStorage.removeItem("np_setupChatData");
+  }, [setupChatData]);
+  useEffect(() => { 
+    if (chatsData) localStorage.setItem("np_chatsData", JSON.stringify(chatsData));
+    else localStorage.removeItem("np_chatsData");
+  }, [chatsData]);
+  useEffect(() => { 
+    if (activePathId) localStorage.setItem("np_activePathId", activePathId);
+    else localStorage.removeItem("np_activePathId");
+  }, [activePathId]);
 
   useEffect(() => {
     // Initial check for token
@@ -34,9 +72,24 @@ export default function App() {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        fetchMetadata(token); // Fetch metadata immediately after user info
       }
     } catch (err) {
       console.error("Failed to fetch user", err);
+    }
+  }
+
+  async function fetchMetadata(token) {
+    try {
+      const res = await fetch("/api/profile/metadata", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMetadata(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch metadata", err);
     }
   }
 
@@ -52,6 +105,10 @@ export default function App() {
   };
 
   const goToLogin = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("np_page");
+    localStorage.removeItem("np_activePathId");
+    setUser(null);
     setPage("login");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -116,6 +173,8 @@ export default function App() {
           onFeatures={goToFeatures}
           onHowItWorks={goToHowItWorks}
           onAbout={goToAbout}
+          user={user}
+          metadata={metadata}
         />
       )}
       {page === "main" && (
@@ -125,6 +184,7 @@ export default function App() {
           onGenerate={(goal, diff, comm) => goToChats(goal, diff, comm)}
           onGoToDashboard={() => goToDashboard()}
           user={user}
+          metadata={metadata}
           onLogout={goToLogin}
         />
       )}
@@ -136,6 +196,7 @@ export default function App() {
           onFinish={goToDashboard}
           onLogout={goToLogin}
           user={user}
+          metadata={metadata}
         />
       )}
       {page === "login" && (
@@ -161,6 +222,8 @@ export default function App() {
           onGeneratePath={(title) => goToChats(title, "Intermediate", "30 - 60 mins (Steady)")}
           onUpdateKnowledge={() => goToChats()}
           user={user}
+          metadata={metadata}
+          onUpdateMetadata={(newMetadata) => setMetadata(newMetadata)}
         />
       )}
       {page === "pricing" && (

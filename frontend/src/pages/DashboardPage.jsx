@@ -113,7 +113,7 @@ const renderMessage = (content) => {
   return parts;
 };
 
-export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user, goToConfusion, isDashboardActive }) {
+export default function DashboardPage({ pathId, onLogout, onNewPath, onGeneratePath, onUpdateKnowledge, user, goToConfusion, isDashboardActive, metadata, onUpdateMetadata }) {
   const [activeConfusionId, setActiveConfusionId] = useState(null);
   const [activeConfusion, setActiveConfusion] = useState(null);
   const [isConfusionResolved, setIsConfusionResolved] = useState(false);
@@ -129,6 +129,92 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
   const [showTooltip, setShowTooltip] = useState(false);
   const [hoveredConfusionId, setHoveredConfusionId] = useState(null);
   const hoverTimeoutRef = useRef(null);
+
+  // Profile Form State
+  const [profileData, setProfileData] = useState({
+    name: user?.name || "",
+    email: user?.email || ""
+  });
+  const [isSynchronizing, setIsSynchronizing] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch("/api/notifications", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || ""
+      });
+    }
+  }, [user]);
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMetadataChange = (e) => {
+    const { name, value } = e.target;
+    onUpdateMetadata({ ...metadata, [name]: value });
+  };
+
+  const changeAvatar = () => {
+    const newSeed = Math.random().toString(36).substring(7);
+    onUpdateMetadata({ ...metadata, avatar_seed: newSeed });
+  };
+
+  const toggleSetting = (key) => {
+    onUpdateMetadata({ ...metadata, [key]: !metadata[key] });
+  };
+
+  const handleSynchronize = async () => {
+    setIsSynchronizing(true);
+    try {
+      const token = localStorage.getItem("token");
+
+      // Update metadata (bio, role, avatar)
+      const res = await fetch("/api/profile/metadata", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!res.ok) {
+        alert("Failed to synchronize profile metadata");
+        return;
+      }
+
+      alert("Profile synchronized successfully!");
+    } catch (err) {
+      console.error("Sync error:", err);
+      alert("A network error occurred while synchronizing.");
+    } finally {
+      setIsSynchronizing(false);
+    }
+  };
 
   const handleNodeMouseEnter = (node) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -617,12 +703,11 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
       <aside className={`np-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`} style={{
         background: "#fff",
-        borderRight: "1px solid #e2e8f0",
         display: "flex",
         flexDirection: "column",
         padding: "0",
         zIndex: 20,
-        overflow: "hidden"
+        overflow: "visible"
       }}>
         <div className="sidebar-header" style={{
           height: "72px",
@@ -643,8 +728,8 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             style={{
-              background: "#fff",
-              border: "1px solid #e2e8f0",
+              background: "none",
+              border: "none",
               borderRadius: "8px",
               width: "32px",
               height: "32px",
@@ -655,13 +740,15 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
               gap: "4px",
               cursor: "pointer",
               transition: "all 0.2s",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
               flexShrink: 0
             }}
+            onMouseOver={e => e.currentTarget.style.background = "#f1f5f9"}
+            onMouseOut={e => e.currentTarget.style.background = "none"}
           >
-            <div style={{ width: "16px", height: "2px", background: "#64748b", borderRadius: "1px" }} />
-            <div style={{ width: "12px", height: "2px", background: "#64748b", borderRadius: "1px" }} />
-            <div style={{ width: "16px", height: "2px", background: "#64748b", borderRadius: "1px" }} />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M9 3v18" />
+            </svg>
           </button>
         </div>
 
@@ -733,7 +820,9 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
             }}>
               {/* Profile */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "10px", cursor: "pointer", color: "var(--dark)", fontSize: "14px", fontWeight: "600" }} className="dropdown-item">
-                <span style={{ color: "var(--gray)" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>
+                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "90%", height: "90%" }} />
+                </div>
                 Profile
               </div>
 
@@ -769,7 +858,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 width: "32px",
                 height: "32px",
                 borderRadius: "50%",
-                background: "var(--blue-light)",
+                background: "#f8fafc",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -778,7 +867,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
                 flexShrink: 0
               }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </div>
               {!isSidebarCollapsed && (
                 <div style={{ minWidth: 0 }}>
@@ -811,7 +900,19 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
             <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "400px" }}>
-              {view === "home" ? "My Learning Paths" : `Path: ${currentPath?.title}`}
+              {(() => {
+                switch (view) {
+                  case 'home': return "My Learning Paths";
+                  case 'mypaths': return "All Paths";
+                  case 'assessment': return "Learning Journey";
+                  case 'saved': return "Saved Topics";
+                  case 'settings':
+                  case 'profile': return "Account Profile";
+                  case 'progress': return "Mastery Progress";
+                  case 'map': return currentPath?.overall_target ? `Path: ${currentPath.overall_target}` : "Learning Path Map";
+                  default: return "Dashboard";
+                }
+              })()}
             </h2>
           </div>
 
@@ -847,11 +948,116 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
               <span>Create Path</span>
             </button>
 
+            {/* NOTIFICATIONS */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => {
+                  if (!showNotifications) fetchNotifications();
+                  setShowNotifications(!showNotifications);
+                }}
+                style={{
+                  width: "40px", height: "40px", borderRadius: "50%",
+                  background: "#fff", border: "1.5px solid #e2e8f0",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", transition: "all 0.2s", color: "#64748b",
+                  position: "relative"
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.borderColor = "#5A72F6"; e.currentTarget.style.color = "#5A72F6"; }}
+                onMouseOut={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10.0247 4.75C9.61049 4.75 9.2747 5.08579 9.2747 5.5C9.2747 5.91421 9.61049 6.25 10.0247 6.25V4.75ZM13.3397 6.25C13.7539 6.25 14.0897 5.91421 14.0897 5.5C14.0897 5.08579 13.7539 4.75 13.3397 4.75V6.25ZM10.4822 17.5C10.4822 17.0858 10.1464 16.75 9.7322 16.75C9.31799 16.75 8.9822 17.0858 8.9822 17.5H10.4822ZM14.3822 17.5C14.3822 17.0858 14.0464 16.75 13.6322 16.75C13.218 16.75 12.8822 17.0858 12.8822 17.5H14.3822ZM11.6822 7.326L11.7043 6.57633C11.6898 6.5759 11.6754 6.57589 11.6609 6.5763L11.6822 7.326ZM16.5514 11.758L17.2986 11.6935C17.2973 11.679 17.2957 11.6646 17.2936 11.6502L16.5514 11.758ZM17.1364 14.758L16.4197 14.9791C16.4441 15.0581 16.4813 15.1326 16.53 15.1994L17.1364 14.758ZM17.3635 16.67L18.0154 17.041C18.0311 17.0132 18.0451 16.9845 18.0573 16.955L17.3635 16.67ZM15.979 17.497L15.979 18.2471L15.9885 18.2469L15.979 17.497ZM7.38343 17.497L7.37395 18.247H7.38343V17.497ZM5.99893 16.67L5.30543 16.9556C5.3175 16.9849 5.33142 17.0134 5.3471 17.041L5.99893 16.67ZM6.2222 14.761L6.82983 15.2006C6.87787 15.1343 6.9147 15.0604 6.93886 14.9821L6.2222 14.761ZM6.8072 11.761L6.06492 11.6536C6.06287 11.6679 6.06122 11.6822 6.05998 11.6965L6.8072 11.761ZM10.0247 6.25H13.3397V4.75H10.0247V6.25ZM8.9822 17.5C8.9822 19.0008 10.1732 20.25 11.6822 20.25V18.75C11.0372 18.75 10.4822 18.2084 10.4822 17.5H8.9822ZM11.6822 20.25C13.1912 20.25 14.3822 19.0008 14.3822 17.5H12.8822C12.8822 18.2084 12.3272 18.75 11.6822 18.75V20.25ZM11.6601 8.07567C13.7382 8.13689 15.4977 9.72056 15.8091 11.8658L17.2936 11.6502C16.8814 8.81119 14.5374 6.65979 11.7043 6.57633L11.6601 8.07567ZM15.8041 11.8225C15.8967 12.8944 16.103 13.9529 16.4197 14.9791L17.853 14.5369C17.5679 13.6128 17.3819 12.6593 17.2986 11.6935L15.8041 11.8225ZM16.53 15.1994C16.7768 15.5384 16.8317 15.9908 16.6698 16.385L18.0573 16.955C18.4159 16.0821 18.298 15.0794 17.7427 14.3166L16.53 15.1994ZM16.7117 16.299C16.5524 16.579 16.2682 16.7433 15.9696 16.7471L15.9885 18.2469C16.832 18.2363 17.5989 17.7727 18.0154 17.041L16.7117 16.299ZM15.979 16.747H7.38343V18.247H15.979V16.747ZM7.3929 16.7471C7.09428 16.7433 6.8101 16.579 6.65075 16.299L5.3471 17.041C5.76357 17.7727 6.53044 18.2363 7.37395 18.2469L7.3929 16.7471ZM6.69242 16.3844C6.53048 15.9912 6.58448 15.5397 6.82983 15.2006L5.61458 14.3214C5.06265 15.0842 4.94681 16.0848 5.30543 16.9556L6.69242 16.3844ZM6.93886 14.9821C7.25551 13.9559 7.4619 12.8974 7.55442 11.8255L6.05998 11.6965C5.97661 12.6623 5.79067 13.6158 5.50554 14.5399L6.93886 14.9821ZM7.54948 11.8684C7.86016 9.72025 9.62274 8.1347 11.7035 8.0757L11.6609 6.5763C8.82409 6.65675 6.47609 8.81078 6.06492 11.6536L7.54948 11.8684Z" />
+                </svg>
+                {notifications.length > 0 && (
+                  <span style={{
+                    position: "absolute", top: "0", right: "0",
+                    width: "12px", height: "12px", borderRadius: "50%",
+                    background: "#ef4444", border: "2px solid #fff"
+                  }} />
+                )}
+              </button>
+
+              {showNotifications && (
+                <div style={{
+                  position: "absolute", top: "100%", right: "0",
+                  width: "320px", background: "#fff", borderRadius: "16px",
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.12)", border: "1px solid #e2e8f0",
+                  marginTop: "12px", zIndex: 100, overflow: "hidden",
+                  animation: "slideDown 0.2s ease-out"
+                }}>
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "14px", fontWeight: "800", color: "#1e293b" }}>Notifications</span>
+                    {notifications.length > 0 && <span style={{ fontSize: "11px", fontWeight: "700", color: "#5A72F6", cursor: "pointer" }} onClick={() => setNotifications([])}>Clear all</span>}
+                  </div>
+                  <div className="hide-scrollbar" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: "80px 20px", textAlign: "center" }}>
+                        <div style={{ color: "#cbd5e1", marginBottom: "16px", display: "flex", justifyContent: "center" }}>
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10.1322 4.75C9.71799 4.75 9.3822 5.08579 9.3822 5.5C9.3822 5.91421 9.71799 6.25 10.1322 6.25V4.75ZM13.4053 6.25C13.8195 6.25 14.1553 5.91421 14.1553 5.5C14.1553 5.08579 13.8195 4.75 13.4053 4.75V6.25ZM13.6978 16.629C13.2836 16.629 12.9478 16.9648 12.9478 17.379C12.9478 17.7932 13.2836 18.129 13.6978 18.129V16.629ZM16.0222 17.379L16.0222 18.1291L16.032 18.1289L16.0222 17.379ZM17.392 16.56L18.044 16.9308C18.0597 16.9032 18.0736 16.8746 18.0857 16.8452L17.392 16.56ZM17.1678 14.667L16.4516 14.8895C16.4759 14.9679 16.513 15.0417 16.5612 15.1081L17.1678 14.667ZM16.5828 11.695L17.3299 11.6293C17.3281 11.6086 17.3254 11.5881 17.3219 11.5677L16.5828 11.695ZM15.7736 8.37843C15.4955 8.07147 15.0212 8.04808 14.7142 8.3262C14.4073 8.60431 14.3839 9.07861 14.662 9.38557L15.7736 8.37843ZM13.689 18.132C14.1032 18.132 14.439 17.7962 14.439 17.382C14.439 16.9678 14.1032 16.632 13.689 16.632V18.132ZM9.83775 16.632C9.42354 16.632 9.08775 16.9678 9.08775 17.382C9.08775 17.7962 9.42354 18.132 9.83775 18.132V16.632ZM14.4488 17.382C14.4488 16.9678 14.113 16.632 13.6988 16.632C13.2845 16.632 12.9488 16.9678 12.9488 17.382H14.4488ZM10.5877 17.382C10.5877 16.9678 10.252 16.632 9.83775 16.632C9.42354 16.632 9.08775 16.9678 9.08775 17.382L10.5877 17.382ZM9.83775 18.132C10.252 18.132 10.5878 17.7962 10.5878 17.382C10.5878 16.9678 10.252 16.632 9.83775 16.632V18.132ZM7.51335 17.382L7.51168 18.132H7.51335V17.382ZM7.27215 16.5906C6.88091 16.4546 6.45347 16.6615 6.31745 17.0527C6.18142 17.4439 6.38831 17.8714 6.77955 18.0074L7.27215 16.5906ZM19.062 6.02358C19.3512 5.727 19.3452 5.25216 19.0486 4.963C18.752 4.67384 18.2772 4.67985 17.988 4.97642L19.062 6.02358ZM14.6905 8.35842C14.4014 8.655 14.4074 9.12984 14.704 9.419C15.0006 9.70816 15.4754 9.70215 15.7645 9.40558L14.6905 8.35842ZM4.338 18.9764C4.04884 19.273 4.05485 19.7478 4.35142 20.037C4.648 20.3262 5.12284 20.3202 5.412 20.0236L4.338 18.9764ZM7.557 17.8236C7.84616 17.527 7.84015 17.0522 7.54358 16.763C7.247 16.4738 6.77216 16.4798 6.483 16.7764L7.557 17.8236ZM15.7616 9.40858C16.0508 9.112 16.0448 8.63716 15.7482 8.348C15.4516 8.05884 14.9768 8.06485 14.6876 8.36142L15.7616 9.40858ZM6.483 16.7764C6.19384 17.073 6.19985 17.5478 6.49642 17.837C6.793 18.1262 7.26784 18.1202 7.557 17.8236L6.483 16.7764ZM13.2634 8.36888C13.6433 8.53394 14.0851 8.35977 14.2501 7.97987C14.4152 7.59996 14.241 7.15818 13.8611 6.99312L13.2634 8.36888ZM11.7682 7.308L11.7677 6.558C11.7604 6.55801 11.753 6.55812 11.7457 6.55834L11.7682 7.308ZM6.94785 11.7L6.20559 11.5925C6.20358 11.6064 6.20196 11.6203 6.20074 11.6343L6.94785 11.7ZM6.36285 14.672L7.01763 15.0377C7.04304 14.9923 7.06364 14.9442 7.07909 14.8945L6.36285 14.672ZM5.33462 15.1879C5.21525 15.5845 5.44002 16.0028 5.83666 16.1222C6.23329 16.2416 6.65161 16.0168 6.77098 15.6201L5.33462 15.1879ZM10.1322 6.25H13.4053V4.75H10.1322V6.25ZM13.6978 18.129H16.0222V16.629H13.6978V18.129ZM16.032 18.1289C16.8696 18.1179 17.6307 17.6574 18.044 16.9308L16.7401 16.1892C16.5838 16.4641 16.3051 16.6252 16.0123 16.6291L16.032 18.1289ZM18.0857 16.8452C18.4419 15.9788 18.3252 14.9833 17.7744 14.2259L16.5612 15.1081C16.8039 15.4418 16.8579 15.8869 16.6984 16.2748L18.0857 16.8452ZM17.884 14.4445C17.5999 13.5298 17.4141 12.5857 17.3299 11.6293L15.8357 11.7607C15.9292 12.8234 16.1357 13.8725 16.4516 14.8895L17.884 14.4445ZM17.3219 11.5677C17.1167 10.3761 16.5799 9.26839 15.7736 8.37843L14.662 9.38557C15.275 10.0621 15.6862 10.908 15.8437 11.8223L17.3219 11.5677ZM13.689 16.632H9.83775V18.132H13.689V16.632ZM12.9488 17.382C12.9488 17.8306 12.7153 18.2359 12.3514 18.4514L13.1156 19.7421C13.9463 19.2502 14.4488 18.3482 14.4488 17.382H12.9488ZM12.3514 18.4514C11.9897 18.6655 11.5468 18.6655 11.1851 18.4514L10.4209 19.7421C11.2538 20.2353 12.2827 20.2353 13.1156 19.7421L12.3514 18.4514ZM11.1851 18.4514C10.8212 18.2359 10.5877 17.8306 10.5877 17.382L9.08775 17.382C9.08775 18.3482 9.59024 19.2502 10.4209 19.7421L11.1851 18.4514ZM9.83775 16.632H7.51335V18.132H9.83775V16.632ZM7.51502 16.632C7.43272 16.6318 7.35073 16.6179 7.27215 16.5906L6.77955 18.0074C7.01504 18.0893 7.26235 18.1314 7.51168 18.132L7.51502 16.632ZM17.988 4.97642L14.6905 8.35842L15.7645 9.40558L19.062 6.02358L17.988 4.97642ZM5.412 20.0236L7.557 17.8236L6.483 16.7764L4.338 18.9764L5.412 20.0236ZM14.6876 8.36142L6.483 16.7764L7.557 17.8236L15.7616 9.40858L14.6876 8.36142ZM13.8611 6.99312C13.1995 6.70566 12.4875 6.5575 11.7677 6.558L11.7688 8.058C12.2817 8.05764 12.7899 8.16318 13.2634 8.36888L13.8611 6.99312ZM11.7457 6.55834C8.9363 6.6429 6.61328 8.77736 6.20559 11.5925L7.69011 11.8075C7.99732 9.68609 9.73636 8.1195 11.7908 8.05766L11.7457 6.55834ZM6.20074 11.6343C6.11658 12.5907 5.93074 13.5348 5.64661 14.4495L7.07909 14.8945C7.39498 13.8775 7.60147 12.8284 7.69496 11.7657L6.20074 11.6343ZM5.70807 14.3063C5.55215 14.5854 5.42695 14.8811 5.33462 15.1879L6.77098 15.6201C6.83212 15.417 6.91489 15.2217 7.01763 15.0377L5.70807 14.3063Z" />
+                          </svg>
+                        </div>
+                        <div style={{ fontSize: "14px", fontWeight: "600", color: "#64748b", letterSpacing: "-0.01em" }}>You're all caught up!</div>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "6px" }}>No new recommendations right now.</div>
+                      </div>
+                    ) : (
+                      notifications.map(n => (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            if (n.type === "recommendation") {
+                              onGeneratePath(n.recommendation.title);
+                              setShowNotifications(false);
+                            }
+                          }}
+                          style={{
+                            padding: "16px 20px", borderBottom: "1px solid #f1f5f9",
+                            cursor: n.type === "recommendation" ? "pointer" : "default",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => n.type === "recommendation" && (e.currentTarget.style.background = "#f8fafc")}
+                          onMouseOut={(e) => n.type === "recommendation" && (e.currentTarget.style.background = "#fff")}
+                        >
+                          <div style={{ display: "flex", gap: "12px" }}>
+                            <div style={{
+                              width: "36px", height: "36px", borderRadius: "10px",
+                              background: n.type === "motivation" ? "rgba(234, 179, 8, 0.1)" : "rgba(90, 114, 246, 0.1)",
+                              color: n.type === "motivation" ? "#ca8a04" : "#5A72F6",
+                              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                            }}>
+                              {n.type === "motivation" ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
+                              ) : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4zM12 14c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" /></svg>
+                              )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>{n.title}</div>
+                              <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", lineHeight: "1.5" }}>{n.content}</div>
+                              <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "8px", fontWeight: "600" }}>JUST NOW</div>
+                            </div>
+                          </div>
+                          {n.type === "recommendation" && (
+                            <div style={{
+                              marginTop: "12px", padding: "8px 12px", borderRadius: "8px",
+                              background: "#eff6ff", color: "#5A72F6", fontSize: "11px",
+                              fontWeight: "700", textAlign: "center"
+                            }}>
+                              Start Learning: {n.recommendation?.title} →
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
         {/* BREADCRUMBS */}
-        {view !== "home" && (
+        {(view === "map" || view === "mypaths" || view === "progress") && (
           <div style={{
             height: "40px",
             background: "#fff",
@@ -1210,9 +1416,223 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 )}
               </div>
             </div>
+          ) : (view === "profile" || view === "settings") ? (
+            /* NEW PREMIUM PROFILE VIEW */
+            <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "60px 40px", background: "#f8fafc" }}>
+              <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+
+                {/* PROFILE SECTION */}
+                <div style={{ marginBottom: "80px" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "40px" }}>
+                      <div style={{ position: "relative" }}>
+                        <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "#f8fafc", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "85%", height: "85%", objectFit: "contain" }} />
+                        </div>
+                        <div
+                          onClick={changeAvatar}
+                          style={{ position: "absolute", bottom: "4px", right: "4px", width: "28px", height: "28px", background: "#5A72F6", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(90, 114, 246, 0.4)", border: "2px solid #fff", transition: "transform 0.2s" }}
+                          onMouseOver={e => e.currentTarget.style.transform = "scale(1.1)"}
+                          onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
+                          title="Shuffle Avatar"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" /></svg>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "20px", fontWeight: "700", color: "#1e293b", fontFamily: "inherit" }}>{user?.name || "Alexander Sterling"}</div>
+                        <div style={{ marginTop: "4px" }}>
+                          <input
+                            type="text"
+                            name="role"
+                            value={metadata.role}
+                            onChange={handleMetadataChange}
+                            style={{ fontSize: "14px", color: "#64748b", fontWeight: "500", border: "none", background: "none", outline: "none", padding: 0, width: "100%" }}
+                          />
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "600", textTransform: "uppercase", marginTop: "8px", letterSpacing: "0.08em" }}>Member since Oct 2023</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", marginBottom: "32px" }}>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "8px" }}>Full Name</label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={profileData.name}
+                          onChange={handleProfileChange}
+                          style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", background: "#fff", color: "#1e293b", fontFamily: "inherit" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "8px" }}>Email Address</label>
+                        <input
+                          type="text"
+                          name="email"
+                          value={profileData.email}
+                          onChange={handleProfileChange}
+                          style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", background: "#fff", color: "#1e293b", fontFamily: "inherit" }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: "24px" }}>
+                      <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "12px" }}>Bio</label>
+                      <textarea
+                        name="bio"
+                        value={metadata.bio}
+                        onChange={handleMetadataChange}
+                        style={{ width: "100%", padding: "18px 22px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "15px", color: "#1e293b", background: "#fff", outline: "none", minHeight: "140px", resize: "none", fontFamily: "inherit", lineHeight: "1.7" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ACCOUNT SECTION */}
+                <div style={{ marginBottom: "60px" }}>
+                  <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "24px", marginBottom: "32px" }}>
+                    <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1e293b", marginBottom: "8px" }}>Account Settings</h2>
+                    <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
+                      Configure your notification preferences, security protocols, and privacy boundaries.
+                    </p>
+                  </div>
+                  <div>
+                    <div style={{ background: "#f8fafc", padding: "32px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
+                      <div>
+                        <div style={{ fontSize: "15px", fontWeight: "700" }}>Security Access</div>
+                        <div style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>Update your authentication credentials</div>
+                      </div>
+                      <button
+                        style={{ padding: "12px 24px", border: "1.5px solid #5A72F6", background: "none", color: "#5A72F6", borderRadius: "12px", fontSize: "14px", fontWeight: "700", cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "8px" }}
+                        onMouseOver={e => { e.currentTarget.style.background = "rgba(90, 114, 246, 0.05)"; }}
+                        onMouseOut={e => { e.currentTarget.style.background = "none"; }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                        Change Password
+                      </button>
+                    </div>
+
+                    <div style={{ marginBottom: "40px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b", borderBottom: "1px solid #f1f5f9", paddingBottom: "12px", marginBottom: "24px" }}>Notifications</div>
+                      {[
+                        { title: "Course Progress Updates", desc: "Receive alerts when milestones are reached in your active paths.", key: "course_updates" },
+                        { title: "Community Mentions", desc: "Be notified when colleagues tag you in collaborative libraries.", key: "community_mentions" },
+                        { title: "Marketing & Research", desc: "Periodic updates on new features and platform improvements.", key: "marketing_research" }
+                      ].map((item, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+                          <div>
+                            <div style={{ fontSize: "14px", fontWeight: "700" }}>{item.title}</div>
+                            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>{item.desc}</div>
+                          </div>
+                          <div
+                            onClick={() => toggleSetting(item.key)}
+                            style={{ width: "40px", height: "20px", background: metadata[item.key] ? "#5A72F6" : "#cbd5e1", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "all 0.3s" }}
+                          >
+                            <div style={{ width: "12px", height: "12px", background: "#fff", borderRadius: "50%", position: "absolute", top: "4px", [metadata[item.key] ? "right" : "left"]: "4px", transition: "all 0.3s" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b", borderBottom: "1px solid #f1f5f9", paddingBottom: "12px", marginBottom: "24px" }}>Privacy</div>
+                      {[
+                        { title: "Public Progress Profile", desc: "Allow others in the community to view your learning statistics.", type: "toggle_label", key: "public_profile" },
+                        { title: "Data Anonymization", desc: "Contribute your learning patterns to global research anonymously.", type: "toggle", key: "data_anonymization" }
+                      ].map((item, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+                          <div>
+                            <div style={{ fontSize: "14px", fontWeight: "700" }}>{item.title}</div>
+                            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>{item.desc}</div>
+                          </div>
+                          {item.type === "toggle_label" ? (
+                            <div style={{ display: "flex", border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden" }}>
+                              <div
+                                onClick={() => onUpdateMetadata({ ...metadata, public_profile: true })}
+                                style={{ padding: "10px 20px", fontSize: "13px", fontWeight: "600", background: metadata.public_profile ? "#5A72F6" : "transparent", color: metadata.public_profile ? "#fff" : "#94a3b8", minWidth: "100px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}
+                              >
+                                Visible
+                              </div>
+                              <div
+                                onClick={() => onUpdateMetadata({ ...metadata, public_profile: false })}
+                                style={{ padding: "10px 20px", fontSize: "13px", fontWeight: "600", background: !metadata.public_profile ? "#5A72F6" : "transparent", color: !metadata.public_profile ? "#fff" : "#94a3b8", minWidth: "100px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}
+                              >
+                                Private
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => toggleSetting(item.key)}
+                              style={{ width: "40px", height: "20px", background: metadata[item.key] ? "#5A72F6" : "#cbd5e1", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "all 0.3s" }}
+                            >
+                              <div style={{ width: "12px", height: "12px", background: "#fff", borderRadius: "50%", position: "absolute", top: "4px", [metadata[item.key] ? "right" : "left"]: "4px", transition: "all 0.3s" }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "40px", display: "flex", justifyContent: "flex-end", gap: "24px", marginBottom: "40px", alignItems: "center" }}>
+                  <button
+                    onClick={() => {
+                      setProfileData({
+                        name: user?.name || "",
+                        email: user?.email || ""
+                      });
+                    }}
+                    style={{ background: "none", border: "none", fontSize: "14px", fontWeight: "600", color: "#94a3b8", cursor: "pointer", transition: "all 0.2s" }}
+                    onMouseOver={e => e.currentTarget.style.color = "#ef4444"}
+                    onMouseOut={e => e.currentTarget.style.color = "#94a3b8"}
+                  >
+                    Discard Changes
+                  </button>
+                  <button
+                    onClick={handleSynchronize}
+                    disabled={isSynchronizing}
+                    style={{
+                      background: "#fff",
+                      color: "#5A72F6",
+                      border: "1.5px solid #5A72F6",
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      cursor: isSynchronizing ? "not-allowed" : "pointer",
+                      letterSpacing: "0.02em",
+                      transition: "all 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      opacity: isSynchronizing ? 0.6 : 1
+                    }}
+                    onMouseOver={e => { if (!isSynchronizing) e.currentTarget.style.background = "#eff6ff"; }}
+                    onMouseOut={e => { if (!isSynchronizing) e.currentTarget.style.background = "#fff"; }}
+                  >
+                    <svg
+                      className={isSynchronizing ? "spin" : ""}
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ animation: isSynchronizing ? "spin 2s linear infinite" : "none" }}
+                    >
+                      <path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    {isSynchronizing ? "Synchronizing..." : "Synchronize Profile"}
+                  </button>
+                </div>
+
+              </div>
+            </div>
           ) : view === "assessment" ? (
             /* NEW PREMIUM KNOWLEDGE PROFILE VIEW */
-            <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "40px", background: "#f1f5f9" }}>
+            <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "40px" }}>
               <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
                 {/* TOP HEADER */}
@@ -1232,7 +1652,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                     </p>
                   </div>
                   <button
-                    onClick={() => setView("mypaths")}
+                    onClick={() => setView("profile")}
                     style={{
                       background: "#5A72F6",
                       color: "#fff",
@@ -2240,17 +2660,19 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                 width: "32px",
                                 height: "32px",
                                 borderRadius: "50%",
-                                background: msg.role === "user" ? "#5A72F6" : "#f1f5f9",
+                                background: msg.role === "user" ? "#f8fafc" : "#f1f5f9",
                                 color: msg.role === "user" ? "#fff" : "#5A72F6",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 flexShrink: 0,
                                 fontSize: "13px",
-                                fontWeight: "700"
+                                fontWeight: "700",
+                                overflow: "hidden",
+                                border: msg.role === "user" ? "1px solid #e2e8f0" : "none"
                               }}>
                                 {msg.role === "user" ? (
-                                  user?.name?.charAt(0).toUpperCase() || "U"
+                                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "95%", height: "95%", objectFit: "contain" }} />
                                 ) : (
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="3" y="8" width="6" height="7" rx="1.5" />

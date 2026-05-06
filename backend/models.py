@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from .database import Base
@@ -18,6 +18,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     learning_paths = relationship("LearningPath", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
     def __str__(self):
         return f"{self.email} ({self.name})"
@@ -49,6 +50,20 @@ class LearningPath(Base):
 
     def __str__(self):
         return self.overall_target or self.id
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    type = Column(String) # 'motivation', 'recommendation'
+    title = Column(String)
+    content = Column(Text)
+    recommendation_data = Column(Text, nullable=True) # JSON string
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="notifications")
 
 
 class LearningModule(Base):

@@ -2,7 +2,7 @@ import { useState } from "react";
 import "../styles/pages.css";
 import { LogoIcon } from "../components/Icons";
 
-export default function MainPage({ initialGoal, onBack, onGenerate, onGoToDashboard, user, onLogout }) {
+export default function MainPage({ initialGoal, onBack, onGenerate, onGoToDashboard, user, onLogout, metadata }) {
   const [goal, setGoal] = useState(initialGoal || "");
   const [difficulty, setDifficulty] = useState("Beginner");
   const [commitment, setCommitment] = useState("30 - 60 mins (Steady)");
@@ -61,7 +61,21 @@ export default function MainPage({ initialGoal, onBack, onGenerate, onGoToDashbo
             <span style={{ fontSize: "13px", fontWeight: "600", color: "#1e293b" }}>
               {user ? user.name : "Guest"}
             </span>
-            <div className="avatar" style={{ border: showDropdown ? "2px solid #5A72F6" : "2px solid transparent" }}>👤</div>
+            <div className="avatar" style={{ 
+              border: showDropdown ? "2px solid #5A72F6" : "1.5px solid #e2e8f0",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#f8fafc",
+              borderRadius: "50%",
+              width: "32px",
+              height: "32px"
+            }}>
+              {user ? (
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${metadata.avatar_seed}`} alt="avatar" style={{ width: "90%", height: "90%" }} />
+              ) : "👤"}
+            </div>
           </div>
 
           {/* DROPDOWN MENU */}
