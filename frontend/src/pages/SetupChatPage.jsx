@@ -10,6 +10,7 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
   const [loading, setLoading] = useState(true);
   const [chatDisabled, setChatDisabled] = useState(true);
   const [generatedPathId, setGeneratedPathId] = useState(null);
+  const [researchEnabled, setResearchEnabled] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -91,6 +92,7 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
           messages: requestMessages,
           provider: "openrouter",
           use_openrouter: true,
+          use_research: researchEnabled,
           debug_mode: isDebugMode
         })
       });
@@ -316,6 +318,36 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
       <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "0 24px 32px 24px" }}>
         {phase !== "done" ? (
           <form onSubmit={handleSend} style={{ position: "relative", display: "flex" }}>
+            <button
+              type="button"
+              onClick={() => setResearchEnabled(!researchEnabled)}
+              title={researchEnabled ? "Live Research Enabled" : "Live Research Disabled"}
+              style={{
+                position: "absolute",
+                left: "8px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: researchEnabled ? "rgba(90, 114, 246, 0.1)" : "transparent",
+                color: researchEnabled ? "#5A72F6" : "#94a3b8",
+                border: researchEnabled ? "1px solid rgba(90, 114, 246, 0.2)" : "1px solid #e2e8f0",
+                borderRadius: "14px",
+                width: "38px",
+                height: "38px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                zIndex: 2,
+                boxShadow: researchEnabled ? "0 2px 8px rgba(90,114,246,0.1)" : "none"
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+            </button>
             <input
               type="text"
               value={inputValue}
@@ -324,15 +356,48 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
               disabled={chatDisabled}
               style={{
                 flex: 1,
-                padding: "20px 60px 20px 24px",
-                borderRadius: "32px",
+                padding: "16px 105px 16px 54px",
+                borderRadius: "14px",
                 border: "1px solid #e5e7eb",
                 fontSize: "16px",
                 outline: "none",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-                background: "#fff"
+                boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                background: "#fff",
+                fontFamily: "inherit",
+                transition: "all 0.2s"
               }}
+              onFocus={e => { e.target.style.borderColor = "#5A72F6"; e.target.style.boxShadow = "0 4px 20px rgba(90,114,246,0.08)"; }}
+              onBlur={e => { e.target.style.borderColor = "#e5e7eb"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }}
             />
+            {/* DEBUG MODE TOGGLE (RIGHT) */}
+            <button
+              type="button"
+              onClick={() => setIsDebugMode(!isDebugMode)}
+              title={isDebugMode ? "Debug Mode Active" : "Enable Debug Mode"}
+              style={{
+                position: "absolute",
+                right: "56px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: isDebugMode ? "rgba(239, 68, 68, 0.1)" : "transparent",
+                color: isDebugMode ? "#ef4444" : "#94a3b8",
+                border: isDebugMode ? "1px solid rgba(239, 68, 68, 0.2)" : "transparent",
+                borderRadius: "12px",
+                width: "34px",
+                height: "34px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                zIndex: 2,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </button>
             <button
               type="submit"
               disabled={chatDisabled || !inputValue.trim()}

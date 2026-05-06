@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 from ..database import get_db
 from ..dependencies import get_current_user
-from ..models import User, LearningPath, LearningModule, ModuleChatMessage, ConfusionChatMessage
+from ..models import User, LearningPath, LearningModule, ModuleChatMessage, ConfusionChatMessage, ConfusionNode
 
 router = APIRouter(
     prefix="/api/stats",
@@ -45,10 +45,18 @@ async def get_stats_overview(current_user: User = Depends(get_current_user), db:
     ).filter(
         LearningPath.user_id == current_user.id
     ).distinct().all()
-    confusion_dates = db.query(func.date(ConfusionChatMessage.created_at)).join(ConfusionChatMessage.confusion_node).filter(ConfusionChatMessage.confusion_node.has(user_id=current_user.id)).distinct().all()
     
     # Flatten and convert to set of dates
-    activity_dates = {d[0] for d in activity_days} | {d[0] for d in confusion_dates}
+    activity_dates = {d[0] for d in activity_days}
+    
+    # Corrected confusion dates query - use explicit join instead of .has()
+    confusion_msg_dates = db.query(func.date(ConfusionChatMessage.created_at))\
+        .join(ConfusionNode, ConfusionChatMessage.confusion_node_id == ConfusionNode.id)\
+        .filter(ConfusionNode.user_id == current_user.id)\
+        .distinct().all()
+    
+    for d in confusion_msg_dates:
+        activity_dates.add(d[0])
     
     streak = 0
     if activity_dates:
@@ -75,8 +83,14 @@ async def get_stats_overview(current_user: User = Depends(get_current_user), db:
     
     # 3. Total Time (Estimate)
     # Heuristic: Each message pair (user -> assistant) represents ~5 minutes of focus time
-    total_messages = db.query(ModuleChatMessage).join(LearningModule).join(LearningPath).filter(LearningPath.user_id == current_user.id).count()
-    total_confusion_messages = db.query(ConfusionChatMessage).join(ConfusionChatMessage.confusion_node).filter(ConfusionChatMessage.confusion_node.has(user_id=current_user.id)).count()
+    total_messages = db.query(ModuleChatMessage)\
+        .join(LearningModule)\
+        .join(LearningPath)\
+        .filter(LearningPath.user_id == current_user.id).count()
+        
+    total_confusion_messages = db.query(ConfusionChatMessage)\
+        .join(ConfusionNode, ConfusionChatMessage.confusion_node_id == ConfusionNode.id)\
+        .filter(ConfusionNode.user_id == current_user.id).count()
     
     estimated_minutes = (total_messages + total_confusion_messages) * 2.5 # Average 2.5 mins per message
     estimated_hours = round(estimated_minutes / 60, 1)

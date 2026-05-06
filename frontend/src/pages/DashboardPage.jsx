@@ -401,10 +401,23 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
       const res = await fetch("/api/stats/overview", {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) throw new Error("Fetch failed");
       const data = await res.json();
       setUserStats(data);
     } catch (err) {
       console.error("Failed to fetch stats", err);
+      // Set empty stats instead of null to stop the infinite spinner
+      setUserStats({
+        mastery_percent: 0,
+        total_mastered: 0,
+        total_concepts: 0,
+        current_streak: 0,
+        total_hours: 0,
+        pace_comparison: 0,
+        recently_completed: [],
+        achievements: [],
+        daily_quote: { text: "The expert in anything was once a beginner.", author: "Helen Hayes" }
+      });
     }
   };
 
@@ -415,10 +428,12 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
       const res = await fetch("/api/chat/knowledge-summary", {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) throw new Error("Fetch failed");
       const data = await res.json();
       setKnowledgeProfile(data.knowledge_summary);
     } catch (err) {
       console.error("Failed to fetch profile", err);
+      setKnowledgeProfile("Profile unavailable.");
     } finally {
       setIsRefreshingProfile(false);
     }
@@ -480,7 +495,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
       });
       if (!res.ok) throw new Error("Failed to load graph");
       const data = await res.json();
-      
+
       // DEBUG: Log confusion counts
       const target = data.modules?.find(m => m.id === selectedModule?.id);
       if (target) {
@@ -509,7 +524,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
         if (updatedSelf) {
           const statusChanged = updatedSelf.status !== selectedModule.status;
           const confusionsChanged = (updatedSelf.confusions?.length || 0) !== (selectedModule.confusions?.length || 0);
-          
+
           if (statusChanged || confusionsChanged) {
             setSelectedModule(updatedSelf);
           }
@@ -1204,7 +1219,17 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                   <div>
                     <h1 style={{ fontSize: "32px", fontWeight: "800", color: "#1e293b", margin: 0 }}>Your Learning Journey</h1>
-                    <p style={{ color: "#64748b", margin: "4px 0 0 0", fontSize: "16px" }}>You're making incredible progress! Only 4 units left to reach Master status.</p>
+                    <p style={{ color: "#64748b", margin: "4px 0 0 0", fontSize: "16px" }}>
+                      {userStats ? (
+                        userStats.total_concepts - userStats.total_mastered > 0 ? (
+                          <>You're making incredible progress! Only <strong style={{ color: "#5A72F6" }}>{userStats.total_concepts - userStats.total_mastered} units</strong> left to reach Master status.</>
+                        ) : userStats.total_concepts > 0 ? (
+                          <>Congratulations! You have mastered all concepts in your current curriculum.</>
+                        ) : (
+                          <>Start your first path to begin your learning journey!</>
+                        )
+                      ) : "Loading your progress..."}
+                    </p>
                   </div>
                   <button
                     onClick={() => setView("mypaths")}
@@ -1249,12 +1274,20 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
                     {/* KNOWLEDGE OVERVIEW CARD */}
                     {(() => {
-                      const masteryPercent = userStats?.mastery_percent || 0;
-                      const totalMastered = userStats?.total_mastered || 0;
-                      const totalPossible = userStats?.total_concepts || 0;
-                      const currentStreak = userStats?.current_streak || 0;
-                      const totalHours = userStats?.total_hours || 0;
-                      const paceDiff = userStats?.pace_comparison || 0;
+                      if (!userStats) {
+                        return (
+                          <div style={{ background: "#fff", borderRadius: "24px", padding: "40px", boxShadow: "0 2px 40px rgba(0,0,0,0.03)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "260px" }}>
+                            <div className="spinner" />
+                          </div>
+                        );
+                      }
+
+                      const masteryPercent = userStats.mastery_percent || 0;
+                      const totalMastered = userStats.total_mastered || 0;
+                      const totalPossible = userStats.total_concepts || 0;
+                      const currentStreak = userStats.current_streak || 0;
+                      const totalHours = userStats.total_hours || 0;
+                      const paceDiff = userStats.pace_comparison || 0;
 
                       return (
                         <div style={{ background: "#fff", borderRadius: "24px", padding: "40px", boxShadow: "0 2px 40px rgba(0,0,0,0.03)", display: "grid", gridTemplateColumns: "200px 1fr", gap: "40px", alignItems: "center" }}>
@@ -1271,15 +1304,21 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           <div>
                             <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", marginBottom: "16px" }}>Knowledge Overview</h2>
                             <p style={{ color: "#64748b", fontSize: "15px", lineHeight: "1.6", marginBottom: "24px" }}>
-                              You have successfully mastered <strong style={{ color: "#1e293b" }}>{totalMastered} out of {totalPossible}</strong> core concepts in your current curriculum.
-                              {paceDiff > 0 && (
-                                <> Your pace is <strong style={{ color: "#10b981" }}>{paceDiff}% faster</strong> than average learners this month.</>
-                              )}
-                              {paceDiff < 0 && (
-                                <> Your pace is <strong style={{ color: "#ef4444" }}>{Math.abs(paceDiff)}% slower</strong> than average learners. Keep it up!</>
-                              )}
-                              {paceDiff === 0 && (
-                                <> Your pace is <strong style={{ color: "#5A72F6" }}>exactly on track</strong> with average learners.</>
+                              {totalPossible > 0 ? (
+                                <>
+                                  You have successfully mastered <strong style={{ color: "#1e293b" }}>{totalMastered} out of {totalPossible}</strong> core concepts in your current curriculum.
+                                  {paceDiff > 0 && (
+                                    <> Your pace is <strong style={{ color: "#10b981" }}>{paceDiff}% faster</strong> than average learners this month.</>
+                                  )}
+                                  {paceDiff < 0 && (
+                                    <> Your pace is <strong style={{ color: "#ef4444" }}>{Math.abs(paceDiff)}% slower</strong> than average learners. Keep it up!</>
+                                  )}
+                                  {paceDiff === 0 && (
+                                    <> Your pace is <strong style={{ color: "#5A72F6" }}>exactly on track</strong> with average learners.</>
+                                  )}
+                                </>
+                              ) : (
+                                "Start a learning path to see your knowledge overview and track your mastery across core concepts."
                               )}
                             </p>
                             <div style={{ display: "flex", gap: "32px", marginTop: "8px" }}>
@@ -2070,7 +2109,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                     token={localStorage.getItem("token")}
                     onConfusionStarted={(node) => {
                       console.log("DEBUG: Side-quest started, injecting into local state...");
-                      
+
                       // 1. Manually update currentPath modules to show pill instantly
                       if (currentPath) {
                         const updatedModules = currentPath.modules.map(m => {
@@ -2088,7 +2127,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           }
                           return m;
                         });
-                        
+
                         setCurrentPath({
                           ...currentPath,
                           modules: updatedModules
@@ -2106,14 +2145,14 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
 
                       checkUnresolvedConfusion(selectedModule.id);
                       setActiveConfusionId(node.id);
-                      
+
                       // 2. Auto-expand the deep dives section for this module
                       setExpandedConfusions(prev => {
                         const next = new Set(prev);
                         next.add(selectedModule.id);
                         return next;
                       });
-                      
+
                       // 3. Still trigger a background refresh to be 100% sure
                       setTimeout(() => {
                         if (currentPath) {

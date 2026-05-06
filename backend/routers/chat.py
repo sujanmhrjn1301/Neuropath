@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
     injected_response: Optional[str] = None
     debug_mode: bool = False
     use_openrouter: bool = False
+    use_research: bool = False
 
 research_market_tool = {
     "type": "function",
@@ -98,6 +99,10 @@ knowledge_tool = {
 
 @router.post("/knowledge-setup")
 async def chat_knowledge_setup(request: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    print(f"\n📥 [INCOMING REQUEST] /knowledge-setup")
+    print(f"🛠️  RESEARCH MODE: {request.use_research}")
+    print(f"🐛 DEBUG MODE: {request.debug_mode}")
+    print(f"🌐 PROVIDER: {'OpenRouter' if request.use_openrouter else 'DeepSeek'}\n")
     
     # Build dynamic context with user goal and existing knowledge profile
     goal = current_user.main_goal or "Not specified"
@@ -128,7 +133,8 @@ async def chat_knowledge_setup(request: ChatRequest, current_user: User = Depend
                 messages=messages,
                 provider=request.provider,
                 injected_response=request.injected_response,
-                tools=[knowledge_tool]
+                tools=[knowledge_tool],
+                use_research=request.use_research
             ):
                 if event["type"] == "content":
                     safe_data = json.dumps({"text": event["data"]})
@@ -157,6 +163,11 @@ async def chat_generate_path(
 ):
     """Phase 3: Syllabus Architect streaming endpoint. Saves generated path to DB."""
 
+    print(f"\n📥 [INCOMING REQUEST] /generate-path")
+    print(f"🛠️  RESEARCH MODE: {request.use_research}")
+    print(f"🐛 DEBUG MODE: {request.debug_mode}")
+    print(f"🌐 PROVIDER: {'OpenRouter' if request.use_openrouter else 'DeepSeek'}\n")
+
     goal = current_user.main_goal or "Not specified"
     knowledge = current_user.knowledge_summary or "No profile yet."
     dynamic_context = (
@@ -167,12 +178,21 @@ async def chat_generate_path(
     # 1. Dynamic Stack Selection
     if request.use_openrouter:
         active_provider = "openrouter"
-        active_tools = [generate_learning_path_tool, research_market_tool]
-        research_directive = "You have access to the `research_market_demands` tool. Once you understand the user's goal, you MUST use this tool to search the live web for current industry requirements BEFORE you use the `generate_learning_path` tool."
     else:
         active_provider = "deepseek"
-        active_tools = [generate_learning_path_tool]
+
+    active_tools = []
+    if request.use_research:
+        active_tools.append(research_market_tool)
+        research_directive = """You have access to the `research_market_demands` tool. 
+CRITICAL: You MUST use this tool IMMEDIATELY to discover the latest required technologies, frameworks, and industry standards for the user's goal.
+You are NOT ALLOWED to propose a syllabus until you have called this tool.
+The user's success depends on learning what the market is ACTUALLY hiring for right now. 
+Your primary mission is to ensure this syllabus is laser-focused on real-world employability."""
+    else:
         research_directive = "Rely purely on your internal knowledge base to assess the user and generate the syllabus. You do not have access to live web search."
+
+    active_tools.append(generate_learning_path_tool)
 
     base_prompt = f"""You are the Lead Curriculum Architect for NeuroPath. A user has clicked "Learn Something New" and told you what they want to learn. Your job is to assess their readiness, pitch a custom syllabus, and upon their approval, generate a strict JSON learning path.
 
@@ -198,7 +218,9 @@ You are operating in God Mode to assist the developer in testing the platform.
 # STANDARD BEHAVIORAL RULES
 1. **The Readiness Check (Don't Rush):** Compare what they want to learn against their Current Knowledge Profile. If they lack critical prerequisites, you MUST pivot. Gently explain the gap and propose building a foundation first.
 2. **The Q&A Phase:** If their request is broad, ask up to 3-5 targeted technical questions to figure out exactly where they should start.
-3. **The Pitch & Justification:** Propose a high-level outline (Max 10 modules). Explain why this specific path is perfect for them.
+3. **The Pitch & Justification:** Propose a high-level outline (Max 10 modules). 
+   - IF RESEARCH MODE IS ON: You MUST explicitly mention specific tools, frameworks, or market shifts discovered in your live research. Use this data to justify why your proposed syllabus is the most "market-ready" path available today.
+   - IF RESEARCH MODE IS OFF: Justify the path based on established pedagogical best practices and industry-standard documentation.
 4. **The Consent Gate:** End your pitch by explicitly asking for their approval. (e.g., "How does this outline look to you? Are we ready to build it?")
 5. **Tool Execution (CRITICAL):** DO NOT execute the `generate_learning_path` tool until the user explicitly agrees to your proposed outline (e.g., they say "Yes", "Looks good", "Let's do it").
 6. **NO RAW JSON (MANDATORY):** Absolutely NEVER output the JSON learning path as text in the chat. You MUST ONLY deliver the final syllabus by calling the `generate_learning_path` tool. If you output raw JSON in the chat, the system will fail.
@@ -211,11 +233,17 @@ You are operating in God Mode to assist the developer in testing the platform.
         current_messages = list(messages)
         while True:
             called_internal_tool = False
+            # Enforcement logic: If research is enabled but not yet performed in this thread, force it.
+            has_researched = any(m.get("role") == "tool" and m.get("name") == "research_market_demands" for m in current_messages)
+            force_research = request.use_research and not has_researched
+            
             async for event in generate_chat_stream(
                 messages=current_messages,
                 provider=active_provider,
                 injected_response=request.injected_response,
-                tools=active_tools
+                tools=active_tools,
+                use_research=request.use_research,
+                tool_choice={"type": "function", "function": {"name": "research_market_demands"}} if force_research else "auto"
             ):
                 if event["type"] == "content":
                     safe_data = json.dumps({"text": event["data"]})
@@ -226,19 +254,26 @@ You are operating in God Mode to assist the developer in testing the platform.
                         called_internal_tool = True
                         search_query = json.loads(event["arguments"]).get("search_query")
                         
-                        yield f'data: {{"text": "\\n\\n*[Researching live market demands...]*\\n\\n"}}\n\n'
+                        yield f'data: {{"status": "researching", "message": "Researching Live Market..."}}\n\n'
+                        yield f'data: {{"text": "\\n\\n> 🔍 **Live Market Research:** Searching for \\"{search_query}\\"...\\n\\n"}}\n\n'
                         
                         from openai import AsyncOpenAI
                         from ..ai_gateway import OPENROUTER_API_KEY
                         client = AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
                         
                         try:
+                            model_to_use = "perplexity/sonar"
+                            print(f"\n🔍 [CHAT_ROUTER] TRIGGERING LIVE RESEARCH")
+                            print(f"📡 PROVIDER: OpenRouter")
+                            print(f"🤖 MODEL: {model_to_use}\n")
+                            
                             resp = await client.chat.completions.create(
-                                model="perplexity/llama-3-sonar-large-32k-online",
+                                model=model_to_use,
                                 messages=[{"role": "user", "content": "You are an expert industry analyst. Return a concise summary of current market demands, required tools, and paradigm shifts based on the user's query: " + str(search_query)}]
                             )
                             market_data = resp.choices[0].message.content
                         except Exception as e:
+                            print(f"ERROR in Live Research: {str(e)}")
                             market_data = f"Research failed: {str(e)}"
                             
                         current_messages.append({

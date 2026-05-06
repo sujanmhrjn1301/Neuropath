@@ -23,6 +23,8 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
   const [chatDisabled, setChatDisabled] = useState(false);
   const [generatedPathId, setGeneratedPathId] = useState(null);
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [researchEnabled, setResearchEnabled] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const messagesEndRef = useRef(null);
   const initialized = useRef(false);
@@ -62,6 +64,7 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
     setChatDisabled(true);
     setLoading(true);
     setHasStarted(false);
+    setStatusMessage(currentPhase === "generate" ? "Generating Map..." : "Thinking...");
 
     const currentMessages = baseMessages || messages;
     if (userText && !userText.startsWith("HIDDEN_PROMPT:")) {
@@ -88,7 +91,13 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
       const response = await fetch(`${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ messages: requestMessages, provider: "openrouter", use_openrouter: true, debug_mode: isDebugMode })
+        body: JSON.stringify({
+          messages: requestMessages,
+          provider: "openrouter",
+          use_openrouter: true,
+          debug_mode: isDebugMode,
+          use_research: researchEnabled
+        })
       });
 
       if (!response.body) throw new Error("No stream");
@@ -131,9 +140,21 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                 setPhase("generate");
                 setTimeout(() => triggerBackendChat("HIDDEN_PROMPT: Excellent, my knowledge profile has been updated. Please propose a syllabus outline for me.", "generate", null), 1000);
               } else if (currentPhase === "generate") {
-                setMessages(prev => [...prev, { role: "assistant", content: "✨ Your personalized learning path has been created! Click below to explore it." }]);
                 setPhase("done");
               }
+            } else if (data.status === "researching") {
+              setStatusMessage(data.message);
+            } else if (data.status === "error" || data.type === "error") {
+              const errMsg = data.message || data.data || "Unknown Error";
+              setMessages(prev => {
+                const n = [...prev];
+                if (n.length > 0 && n[n.length - 1].role === "assistant") {
+                  n[n.length - 1].content = "❌ **Error:** " + errMsg;
+                } else {
+                  n.push({ role: "assistant", content: "❌ **Error:** " + errMsg });
+                }
+                return n;
+              });
             }
           } catch (e) { /* skip */ }
         }
@@ -378,28 +399,38 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
                           fontSize: "15px",
                           boxShadow: msg.role === "user" ? "0 4px 12px rgba(90,114,246,0.2)" : "none",
                           border: "none",
-                          minWidth: (isEmpty && loading) ? "110px" : "auto",
+                          minWidth: (isEmpty && loading) ? "60px" : "auto",
                           display: "flex",
                           alignItems: "center"
                         }}>
-                          {((isEmpty || (!hasStarted && isLast)) || (msg.role === "assistant" && msg.content.trim().startsWith("{"))) && loading && msg.role === "assistant" ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <div className="spinner" style={{ width: "14px", height: "14px", borderWidth: "2.5px", borderTopColor: "#5A72F6", opacity: 0.8 }} />
-                              <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "400", fontFamily: "inherit" }}>
-                                {phase === "generate" ? "Generating Map..." : "Thinking..."}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="markdown-content">
-                              {msg.role === "user" ? (
-                                <span style={{ color: "#fff" }}>{msg.content}</span>
-                              ) : (
-                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                  {msg.content}
-                                </ReactMarkdown>
-                              )}
-                            </div>
-                          )}
+                          <div className="markdown-content" style={{ width: "100%" }}>
+                            {msg.role === "user" ? (
+                              <span style={{ color: "#fff" }}>{msg.content}</span>
+                            ) : (
+                              <>
+                                {msg.content && (
+                                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                    {msg.content}
+                                  </ReactMarkdown>
+                                )}
+                                {isLast && loading && (
+                                  <div style={{ 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: "8px", 
+                                    marginTop: msg.content ? "12px" : "0", 
+                                    paddingTop: msg.content ? "12px" : "0", 
+                                    borderTop: msg.content ? "1px solid #f1f5f9" : "none" 
+                                  }}>
+                                    <div className="spinner" style={{ width: "14px", height: "14px", borderWidth: "2.5px", borderTopColor: "#5A72F6", opacity: 0.8 }} />
+                                    <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "400", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                                      {statusMessage || (phase === "generate" ? "Generating Map..." : "Thinking...")}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -413,35 +444,86 @@ export default function ChatsPage({ initialGoal, initialDifficulty, initialCommi
               <div style={{ maxWidth: "780px", margin: "0 auto", display: "flex", gap: "12px", alignItems: "center" }}>
                 {phase !== "done" ? (
                   <>
-                    <button
-                      onClick={() => setIsDebugMode(!isDebugMode)}
-                      style={{
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "14px",
-                        padding: "12px 16px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        color: isDebugMode ? "#5A72F6" : "#94a3b8",
-                        fontSize: "18px",
-                        fontWeight: "600",
-                        flexShrink: 0
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#d1d5db"; }}
-                      onMouseOut={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
-                      title={isDebugMode ? "Debug Mode ON" : "Enable Debug Mode"}
-                    >
-                      &lt;/&gt;
-                    </button>
                     <form onSubmit={handleSend} style={{ position: "relative", display: "flex", flex: 1 }}>
+                      {/* LIVE RESEARCH TOGGLE (LEFT) */}
+                      <button
+                        type="button"
+                        onClick={() => setResearchEnabled(!researchEnabled)}
+                        title={researchEnabled ? "Live Research Enabled" : "Live Research Disabled"}
+                        style={{
+                          position: "absolute",
+                          left: "8px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: researchEnabled ? "rgba(90, 114, 246, 0.1)" : "transparent",
+                          color: researchEnabled ? "#5A72F6" : "#94a3b8",
+                          border: researchEnabled ? "1px solid rgba(90, 114, 246, 0.2)" : "1px solid #e2e8f0",
+                          borderRadius: "14px",
+                          width: "38px",
+                          height: "38px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          zIndex: 2,
+                          boxShadow: researchEnabled ? "0 2px 8px rgba(90,114,246,0.1)" : "none"
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="2" y1="12" x2="22" y2="12"></line>
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                      </button>
+
                       <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}
                         placeholder="Type your response..." disabled={chatDisabled}
-                        style={{ flex: 1, padding: "16px 60px 16px 22px", borderRadius: "14px", border: "1px solid #e2e8f0", fontSize: "15px", outline: "none", boxShadow: "0 4px 16px rgba(0,0,0,0.03)", background: "#fff", fontFamily: "inherit", transition: "all 0.2s" }}
+                        style={{
+                          flex: 1,
+                          padding: "16px 105px 16px 54px",
+                          borderRadius: "14px",
+                          border: "1px solid #e2e8f0",
+                          fontSize: "15px",
+                          outline: "none",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                          background: "#fff",
+                          fontFamily: "inherit",
+                          transition: "all 0.2s"
+                        }}
                         onFocus={e => { e.target.style.borderColor = "#5A72F6"; e.target.style.boxShadow = "0 4px 20px rgba(90,114,246,0.08)"; }}
                         onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.03)"; }} />
+
+                      {/* DEBUG MODE TOGGLE (RIGHT, NEXT TO SEND) */}
+                      <button
+                        type="button"
+                        onClick={() => setIsDebugMode(!isDebugMode)}
+                        title={isDebugMode ? "Debug Mode Active" : "Enable Debug Mode"}
+                        style={{
+                          position: "absolute",
+                          right: "56px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: isDebugMode ? "rgba(239, 68, 68, 0.1)" : "transparent",
+                          color: isDebugMode ? "#ef4444" : "#94a3b8",
+                          border: isDebugMode ? "1px solid rgba(239, 68, 68, 0.2)" : "transparent",
+                          borderRadius: "12px",
+                          width: "34px",
+                          height: "34px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          zIndex: 2,
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="16 18 22 12 16 6" />
+                          <polyline points="8 6 2 12 8 18" />
+                        </svg>
+                      </button>
+
                       <button type="submit" disabled={chatDisabled || !inputValue.trim()}
                         style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: (chatDisabled || !inputValue.trim()) ? "#f1f5f9" : "#5A72F6", color: (chatDisabled || !inputValue.trim()) ? "#94a3b8" : "#fff", border: "none", borderRadius: "10px", width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", cursor: (chatDisabled || !inputValue.trim()) ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
