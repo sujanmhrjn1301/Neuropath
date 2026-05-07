@@ -1,6 +1,6 @@
 import argparse
 from backend.database import SessionLocal
-from backend.models import User, ModuleChatMessage, LearningModule, LearningPath, ConfusionChatMessage, ConfusionNode
+from backend.models import User, ModuleChatMessage, LearningModule, LearningPath, ConfusionChatMessage, ConfusionNode, Notification
 from datetime import datetime, timedelta, timezone
 
 def simulate_inactivity_for_user(user, days):
