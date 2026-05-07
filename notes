@@ -1,0 +1,9 @@
+The pace comparison is calculated by comparing your modules-per-day rate against a baseline benchmark. Here is the step-by-step logic from the backend:
+
+Your Current Pace: We take your total number of mastered modules (30) and divide it by the number of days since you created your account.
+The Benchmark: We use a baseline "average" of 0.5 modules per day (which is roughly 1 module every 2 days).
+The Comparison: We calculate the percentage difference between your rate and that 0.5 baseline.
+Example: If your account is 20 days old and you've finished 30 modules, your pace is 1.5 modules/day.
+Since 1.5 is 3x faster than the 0.5 benchmark, it calculates a 200% increase.
+The Cap: To keep the UI clean, we cap the display at a maximum of 150% faster.
+So, seeing "150% faster" means you are significantly outperforming the standard learning tempo we've set as the baseline!
