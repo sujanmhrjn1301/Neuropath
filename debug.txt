@@ -1404,3 +1404,78 @@ Understood. To start, let's explore your current photography experience and know
 2.  How comfortable are you with basic photographic principles like aperture, shutter speed, and ISO? Have you experimented with these settings in manual mode?
 
 3.  What kind of photography most interests you (e.g., portraits, landscapes, street photography, macro)? Do you have any experience in that specific area?
+
+
+--- NEW STREAM ---
+Alright, let's dive in. To understand your current knowledge regarding Multi-Criteria Decision Analysis (MCDA), could you please answer the following questions?
+
+1. Have you ever been involved in a project where you had to evaluate multiple options based on conflicting criteria?
+
+2. If so, what methods or frameworks did you use, if any, to structure the decision-making process?
+
+Excellent. Let's dig a bit deeper into your practical experience with MCDA.
+
+1. Can you describe a specific instance where you had to weigh the relative importance of different criteria in a decision? What techniques did you use to determine those weights (e.g., pairwise comparison, direct rating)?
+
+2. Have you ever used any software tools or libraries to assist with MCDA, such as specialized decision support systems or general-purpose programming tools?
+
+Okay, this gives me a better picture. Now, let's explore how you've handled uncertainty and sensitivity in decision-making.
+
+1. In your experience, how have you dealt with uncertainty or variability in the data used for MCDA?
+
+2. Have you ever performed a sensitivity analysis to understand how changes in criteria weights or data values might affect the final decision? If so, how did you communicate those findings?
+
+Thank you. Just a couple more questions to clarify your understanding of different MCDA approaches.
+
+1. Are you familiar with different MCDA methods like AHP (Analytic Hierarchy Process), SAW (Simple Additive Weighting), or TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)?
+
+2. Have you ever had to choose between different MCDA methods for a specific problem? What factors influenced your choice?
+
+Okay, that's very helpful! Based on our conversation, here's my assessment.
+
+
+
+--- NEW STREAM ---
+Okay, great! Since you're aiming to learn Power BI, let's start by exploring your familiarity with its underlying concepts and related tools.
+
+1.  Have you worked with any data visualization tools before, such as Tableau, Qlik Sense, or even Excel charts? If so, what kind of visualizations have you created (e.g., bar charts, scatter plots, maps)?
+
+2.  How comfortable are you with data modeling concepts like relationships between tables, star schemas, and snowflake schemas?
+
+3.  Have you used SQL or other query languages to extract and transform data from databases for reporting or analysis?
+
+
+
+--- NEW STREAM ---
+That's helpful! Let's dig a bit deeper then.
+
+1. In Tableau, have you used calculated fields or parameters to create interactive dashboards? Could you describe a situation where you used a calculated field to solve a specific data analysis problem?
+
+2. When defining relationships between tables, have you dealt with different cardinalities (one-to-one, one-to-many, many-to-many) and referential integrity constraints?
+
+3. Can you give me an example of a complex SQL query you've written that involved joins, aggregations, and filtering? What was the purpose of the query, and what kind of data insights did it provide?
+
+
+--- NEW STREAM ---
+Okay, good to know! Let's refine our focus further.
+
+1. Have you used DAX (Data Analysis Expressions) in Power BI or Power Pivot in Excel? If so, what types of calculations or measures have you created using DAX?
+
+2. Are you familiar with Power Query (also known as Get & Transform Data in Excel) for cleaning, shaping, and loading data from various sources? What kind of data transformations have you performed using Power Query?
+
+3. Have you published dashboards or reports to a server or cloud platform for sharing with others? If so, what security or access control measures did you implement?
+
+
+--- NEW STREAM ---
+Excellent. Let's get a bit more specific about your experience with Power BI's ecosystem.
+
+1. Could you describe a specific scenario where you used Power Query to combine data from multiple sources (e.g., CSV files, databases, web APIs) into a single dataset for analysis? What were some of the challenges you encountered, and how did you overcome them?
+
+2. When using DAX, have you created measures that involve time intelligence functions (e.g., year-to-date, previous year comparisons)? Can you explain how these functions work and why they are useful?
+
+3. Have you used Power BI's row-level security (RLS) features to restrict data access based on user roles or permissions? If so, how did you configure RLS, and what were the key considerations for ensuring data security?
+
+
+--- NEW STREAM ---
+Understood. That clarifies the landscape quite well.
+

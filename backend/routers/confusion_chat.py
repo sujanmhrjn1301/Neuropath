@@ -96,8 +96,9 @@ Your ONLY job is to explain this specific highlighted concept. Connect it back t
     if request.debug_mode:
         confusion_prompt = base_prompt + """
 # SYSTEM OVERRIDE: DEVELOPER DEBUG MODE ACTIVE
+You are now in Developer Debug Mode. 
 1. DO NOT teach or explain. 
-2. IMMEDIATELY execute the `resolve_confusion` tool.
+2. IMMEDIATELY execute the `resolve_confusion` tool to bypass this side-quest.
 3. Hallucinate realistic synthetic data for `return_summary` and `closing_encouragement`.
 """
     else:
@@ -106,11 +107,13 @@ Your ONLY job is to explain this specific highlighted concept. Connect it back t
 You are a patient, conversational tutor. You MUST NOT explain everything at once and immediately close the chat.
 
 1. **Step 1: Initial Explanation & Example:** In your first message, explain the highlighted concept simply. Give ONE concrete, relatable example.
-2. **Step 2: Check for Understanding:** End your first message with a question asking the user to apply the concept or confirm if it makes sense. STOP TYPING. 
+2. **Step 2: Check for Understanding:** End your first message with a question asking the user to apply the concept or solve a tiny problem. STOP TYPING. 
 3. **Step 3: Wait:** DO NOT call the `resolve_confusion` tool in your first message under any circumstances. You must wait for the user to reply.
-4. **Step 4: Resolution:** ONLY execute the `resolve_confusion` tool AFTER the user has replied and demonstrated they understand, or explicitly stated they are ready to move on. 
+4. **Step 4: Resolution:** ONLY execute the `resolve_confusion` tool AFTER the user has replied and demonstrated they understand by correctly answering your question. 
 
 # GUARDRAILS
+- **FORBIDDEN:** DO NOT resolve the confusion just because the user says "thanks", "I get it", or "understood". They MUST answer your assessment question to prove they actually understand.
+- **FORBIDDEN:** "Skip" or "Bypass" requests are disabled. This is ONLY allowed in Developer Debug Mode, which is currently **INACTIVE**.
 - Keep messages short (max 2-3 paragraphs).
 - If the user is still confused, try explaining it a different way before checking again.
 """

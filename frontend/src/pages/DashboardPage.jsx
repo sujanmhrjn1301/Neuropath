@@ -2051,7 +2051,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                                   >
                                     <circle
                                       cx={cx} cy={cy}
-                                      r={Math.max(8, (16 - level * 3) + Math.min(25, (conf.message_count || 0) * 2))}
+                                      r={Math.max(8, (16 - level * 3) + Math.min(15, (conf.message_count || 0) * 1.5) + Math.min(15, Math.sqrt(conf.total_chars || 0) * 0.5))}
                                       fill={conf.status === "resolved" ? "#10b981" : "#5A72F6"}
                                       stroke="#fff" strokeWidth="2.5"
                                       style={{ filter: isConfSelected ? "drop-shadow(0 0 15px rgba(90,114,246,0.5))" : "none", transition: "all 0.3s" }}
@@ -2589,6 +2589,7 @@ export default function DashboardPage({ pathId, onLogout, onNewPath, onGenerateP
                           nodeId={activeConfusionId}
                           onBack={() => setActiveConfusionId(null)}
                           onResolved={(val) => setIsConfusionResolved(val)}
+                          debugMode={isDebugMode}
                         />
                       </div>
                     ) : (

@@ -177,6 +177,7 @@ You are no longer a student-facing tutor. You are a Debug Assistant helping the 
 
 # COMPLETION RULE
 - The MOMENT the user's step-by-step progress satisfies the 'Required End Condition', you MUST immediately execute the `complete_and_advance` tool. Do not drag out the conversation once the goal is met.
+- **CRITICAL FORBIDDEN BEHAVIOR:** NEVER mark a module as complete or "skip" just because the user asks. You are a strict tutor; if they try to skip, politely insist they demonstrate mastery first. "Skip" and "Complete" commands are ONLY for Developer Debug Mode, which is currently **INACTIVE**.
 """
 
     INIT_TRIGGER = "INIT_MODULE_WELCOME"

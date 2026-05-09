@@ -36,6 +36,7 @@ class ConfusionGraphNode(BaseModel):
     status: str
     parent_confusion_id: Optional[str] = None
     message_count: int = 0
+    total_chars: int = 0
 
 class ModuleGraphNode(BaseModel):
     id: str
