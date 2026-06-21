@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from sqladmin import Admin, ModelView
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import engine, Base
-from models import User, LearningPath, LearningModule, ModuleChatMessage, ConfusionNode, ConfusionChatMessage
+from .database import engine, Base
+from .models import User, LearningPath, LearningModule, ModuleChatMessage, ConfusionNode, ConfusionChatMessage
 
 # Create the DB tables
 Base.metadata.create_all(bind=engine)
