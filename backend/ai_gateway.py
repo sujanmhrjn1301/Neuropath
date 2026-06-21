@@ -30,7 +30,7 @@ async def generate_chat_stream(messages: list, provider: str, injected_response:
         print(f"🤖 MODEL: {model}\n")
     elif provider == "openrouter":
         client = AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
-        model = "google/gemini-2.0-flash-001"
+        model = "google/gemini-2.5-flash"
         print(f"\n📡 [STREAM] PROVIDER: OpenRouter")
         print(f"🤖 MODEL: {model}")
         print(f"🔍 RESEARCH MODE: {'ON (Using Tools)' if use_research else 'OFF'}\n")
