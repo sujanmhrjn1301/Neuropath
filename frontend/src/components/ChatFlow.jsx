@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { LogoIcon } from "./Icons";
 import "../styles/pages.css";
+import MCQCard from "./MCQCard";
+import SyllabusRenderer from "./SyllabusRenderer";
 
 export default function ChatFlow({ initialGoal, initialDifficulty, initialCommitment, onFinish, isDebugMode, setIsDebugMode }) {
-  // -- Input phase --
-  const [inputGoal, setInputGoal] = useState(initialGoal || "");
-  const [difficulty, setDifficulty] = useState(initialDifficulty || "Beginner");
-  const [commitment, setCommitment] = useState(initialCommitment || "30 - 60 mins (Steady)");
+    // -- Input phase --
+    const [inputGoal, setInputGoal] = useState(initialGoal || "");
+    const [difficulty, setDifficulty] = useState(initialDifficulty || "Beginner");
+    const [commitment, setCommitment] = useState(initialCommitment || "30 - 60 mins (Steady)");
 
-  // -- Chat phase --
-  const [phase, setPhase] = useState(initialGoal ? "setup" : "input"); // "input" | "setup" | "generate" | "done"
-  const [messages, setMessages] = useState(initialGoal ? [{ role: "user", content: initialGoal }] : []);
-  const [inputValue, setInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [chatDisabled, setChatDisabled] = useState(false);
-  const [generatedPathId, setGeneratedPathId] = useState(null);
+    // -- Chat phase --
+    const [phase, setPhase] = useState(initialGoal ? "setup" : "input"); // "input" | "setup" | "generate" | "done"
+    const [messages, setMessages] = useState(initialGoal ? [{ role: "user", content: initialGoal }] : []);
+    const [inputValue, setInputValue] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [chatDisabled, setChatDisabled] = useState(false);
+    const [generatedPathId, setGeneratedPathId] = useState(null);
+    const [activeMCQ, setActiveMCQ] = useState(null);
 
   const messagesEndRef = useRef(null);
   const initialized = useRef(false);
@@ -48,6 +51,7 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
     if (userText && !userText.startsWith("HIDDEN_PROMPT:")) {
       setMessages(prev => [...prev, { role: "user", content: userText }]);
     }
+    setActiveMCQ(null); // Clear active MCQ on new send
 
     const endpoint = currentPhase === "setup" ? "/api/chat/knowledge-setup" : "/api/chat/generate-path";
     const token = localStorage.getItem("token");
@@ -85,11 +89,20 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
         buffer = lines.pop();
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed.startsWith("data: ")) continue;
+          if (!trimmed) continue;
+          
+          if (!trimmed.startsWith("data: ")) {
+            console.log("DEBUG: Non-data line received:", trimmed);
+            continue;
+          }
+
           const dataStr = trimmed.replace("data: ", "").trim();
           if (!dataStr) continue;
+
           try {
             const data = JSON.parse(dataStr);
+            console.log("DEBUG: Stream JSON received:", data);
+
             if (data.text) {
               if (!hasStarted) { hasStarted = true; setLoading(false); }
               aiMessage += data.text;
@@ -99,8 +112,9 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
                 setMessages(prev => { const n = [...prev]; n[n.length - 1].content = aiMessage; return n; });
               }
             } else if (data.status === "complete") {
+              console.log("DEBUG: Stream complete event");
               setMessages(prev => { const n = [...prev]; n[n.length - 1].content = aiMessage; return n; });
-              if (data.path_id) { setGeneratedPathId(data.path_id); }
+              if (data.path_id) { setGeneratedPath_id(data.path_id); }
               if (currentPhase === "setup") {
                 setPhase("generate");
                 setTimeout(() => triggerBackendChat("HIDDEN_PROMPT: Excellent, my knowledge profile has been updated. Please propose a syllabus outline for me.", "generate", null), 1000);
@@ -108,8 +122,35 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
                 setMessages(prev => [...prev, { role: "assistant", content: "✨ Your personalized learning path has been created! Click below to explore it." }]);
                 setPhase("done");
               }
+            } else if (data.type === "mcq") {
+                console.log("DEBUG: MCQ Event detected!", data.data);
+                try {
+                    const mcqData = JSON.parse(data.data);
+                    console.log("DEBUG: Parsed MCQ Questions:", mcqData.questions);
+                    setActiveMCQ(mcqData.questions);
+                    setLoading(false);
+                } catch (e) { console.error("MCQ Parse error:", e); }
             }
-          } catch (e) { /* skip */ }
+          } catch (e) { 
+            console.error("DEBUG: Stream parse error for line:", dataStr, e);
+          }
+        }
+      }
+      
+      // Process any remaining buffer content after stream is done
+      if (buffer.trim()) {
+        const line = buffer.trim();
+        console.log("DEBUG: Processing final buffer:", line);
+        if (line.startsWith("data: ")) {
+          const dataStr = line.replace("data: ", "").trim();
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.type === "mcq") {
+                const mcqData = JSON.parse(data.data);
+                setActiveMCQ(mcqData.questions);
+                setLoading(false);
+            }
+          } catch (e) { console.error("DEBUG: Final buffer parse error:", e); }
         }
       }
     } catch (err) { console.error(err); }
@@ -132,6 +173,18 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
     const text = inputValue;
     setInputValue("");
     triggerBackendChat(text, phase, null);
+  };
+
+  const handleMCQSelect = (question, option) => {
+    if (option === "Something else") {
+        setActiveMCQ(null);
+        return;
+    }
+    triggerBackendChat(option, phase, null);
+  };
+
+  const handleMCQSkip = () => {
+    setActiveMCQ(null);
   };
 
   return (
@@ -229,18 +282,29 @@ export default function ChatFlow({ initialGoal, initialDifficulty, initialCommit
                             <div className="spinner" style={{ width: "16px", height: "16px", margin: 0, borderTopColor: "#5A72F6" }} />
                             <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "500" }}>{phase === "generate" ? "Building syllabus..." : "Thinking..."}</span>
                           </div>
-                        ) : msg.content}
+                        ) : (
+                          msg.role === "user" ? msg.content : <SyllabusRenderer content={msg.content} />
+                        )}
                       </div>
                     </div>
                   );
                 })}
+              
+
               <div ref={messagesEndRef} />
             </div>
           </div>
 
           {/* Input bar */}
           <div style={{ padding: "0 40px 32px", flexShrink: 0 }}>
-            <div style={{ maxWidth: "780px", margin: "0 auto" }}>
+            <div style={{ maxWidth: "780px", margin: "0 auto", position: "relative" }}>
+              
+              {activeMCQ && (
+                  <div className="mcq-docked-container">
+                      <MCQCard questions={activeMCQ} onSelect={handleMCQSelect} onSkip={handleMCQSkip} />
+                  </div>
+              )}
+
               {phase !== "done" ? (
                 <form onSubmit={handleSend} style={{ position: "relative", display: "flex" }}>
                   <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}

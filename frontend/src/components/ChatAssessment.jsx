@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import MCQCard from './MCQCard';
 
 const ChatAssessment = ({ token }) => {
     const navigate = useNavigate();
@@ -12,6 +13,7 @@ const ChatAssessment = ({ token }) => {
     const [injectedDebugResponse, setInjectedDebugResponse] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+    const [activeMCQ, setActiveMCQ] = useState(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -36,6 +38,7 @@ const ChatAssessment = ({ token }) => {
         setMessages(newMessagesArray);
         setCurrentInput('');
         setIsStreaming(true);
+        setActiveMCQ(null); // Clear active MCQ on manual send
 
         // Add empty assistant bubble to stream into
         setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
@@ -93,7 +96,18 @@ const ChatAssessment = ({ token }) => {
                                 return; // Exit stream processing
                             }
 
-                            // 2. Check for our JSON text envelope {text: "..."}
+                            // 2. Check for MCQ tool call event
+                            if (jsonData.type === 'mcq') {
+                                try {
+                                    const mcqData = JSON.parse(jsonData.data);
+                                    setActiveMCQ(mcqData.questions);
+                                } catch (err) {
+                                    console.error("Failed to parse MCQ data:", err);
+                                }
+                                return;
+                            }
+
+                            // 3. Check for our JSON text envelope {text: "..."}
                             if (jsonData.text !== undefined) {
                                 setMessages(prev => {
                                     const updated = [...prev];
@@ -162,7 +176,29 @@ const ChatAssessment = ({ token }) => {
         }
     };
 
+    const handleMCQSelect = (question, option) => {
+        if (option === "Something else") {
+            // Just focus the input
+            setActiveMCQ(null);
+            document.querySelector('.chat-input')?.focus();
+            return;
+        }
+
+        const responseText = `${option}`;
+        setCurrentInput(responseText);
+        
+        // Use a timeout to ensure state update before sending
+        setTimeout(() => {
+            handleSend();
+        }, 10);
+    };
+
+    const handleMCQSkip = () => {
+        setActiveMCQ(null);
+    };
+
     const isDebug = provider === 'debug';
+
 
     return (
         <div className="assessment-page">
@@ -226,6 +262,15 @@ const ChatAssessment = ({ token }) => {
                                 </div>
                             ))
                         )}
+                        
+                        {activeMCQ && !isStreaming && (
+                            <MCQCard 
+                                questions={activeMCQ} 
+                                onSelect={handleMCQSelect}
+                                onSkip={handleMCQSkip}
+                            />
+                        )}
+
                         <div ref={messagesEndRef} />
                     </div>
 

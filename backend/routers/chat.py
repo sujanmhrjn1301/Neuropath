@@ -33,46 +33,130 @@ class ChatRequest(BaseModel):
     use_openrouter: bool = False
     use_research: bool = False
 
+present_questions_tool = {
+    "type": "function",
+    "function": {
+        "name": "present_questions",
+        "description": "Displays one or more multiple-choice questions to the user to make the assessment faster and less tedious. Use this for experience levels, tech stack preferences, and foundational knowledge checks.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question": {"type": "string", "description": "The text of the question."},
+                            "options": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "A list of potential answers (3-5 options recommended)."
+                            },
+                            "context_label": {"type": "string", "description": "Optional short label, e.g. 'Skill Level'."}
+                        },
+                        "required": ["question", "options"]
+                    }
+                }
+            },
+            "required": ["questions"]
+        }
+    }
+}
+
 research_market_tool = {
     "type": "function",
     "function": {
         "name": "research_market_demands",
-        "description": "Searches the live internet for current market trends, job requirements, and industry shifts related to the user's goal. Use this BEFORE generating a learning path to ensure the syllabus is aligned with real-world demands.",
+        "description": "Searches the web to discover the latest required technologies, frameworks, and industry standards for a specific career goal.",
         "parameters": {
             "type": "object",
             "properties": {
-                "search_query": {
-                    "type": "string",
-                    "description": "A highly specific query detailing the user's goal and current knowledge to find exact market requirements."
-                }
+                "search_query": {"type": "string", "description": "The specific query to research, e.g., 'React developer market demands 2024'."}
             },
             "required": ["search_query"]
         }
     }
 }
 
-ASSESSOR_SYSTEM_PROMPT = """
-You are the Lead Syllabus Architect for NeuroPath. Your sole objective is to assess the user's current technical knowledge deeply but efficiently, so we can build highly personalized learning paths later.
+generate_learning_path_tool = {
+    "type": "function",
+    "function": {
+        "name": "generate_learning_path",
+        "description": "Generates the final, highly detailed JSON syllabus state machine once the user has approved the learning path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_profile": {
+                    "type": "object",
+                    "properties": {
+                        "user_request": {"type": "string", "description": "What the user explicitly asked to learn."},
+                        "user_learning_preferences": {"type": "string"},
+                        "skill_summary": {"type": "string", "description": "Brief summary of their current related skills."},
+                        "user_goal": {"type": "string"}
+                    },
+                    "required": ["user_request", "user_learning_preferences", "skill_summary", "user_goal"]
+                },
+                "main_workflow": {
+                    "type": "object",
+                    "properties": {
+                        "overall_target": {"type": "string", "description": "The ultimate project or goal of this specific path."},
+                        "dataset_configuration": {
+                            "type": "object",
+                            "description": "Optional. If this is a data/coding path, define a consistent dataset/project environment to use across all modules.",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "context": {"type": "string"},
+                                "columns": {"type": "array", "items": {"type": "string"}},
+                                "purposeful_imperfections": {"type": "string"},
+                                "restrictions": {"type": "string"}
+                            }
+                        },
+                        "progression_roadmap": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "High-level names of the phases."
+                        },
+                        "global_assessment_rules": {"type": "string"}
+                    },
+                    "required": ["overall_target", "progression_roadmap", "global_assessment_rules"]
+                },
+                "learning_path": {
+                    "type": "array",
+                    "description": "The sequential modules. Maximum 10 items. The final item MUST be a capstone project.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "description": "Unique identifier, e.g., py_basics_001"},
+                            "module_type": {
+                                "type": "string", 
+                                "enum": ["lesson", "project"], 
+                                "description": "Standard learning nodes are 'lesson'. The final capstone node MUST be 'project'."
+                            },
+                            "title": {"type": "string"},
+                            "instructional_goal": {"type": "string", "description": "What the AI tutor must teach or guide the user to build."},
+                            "end_condition": {"type": "string", "description": "The exact criteria or code the user must produce to pass this node."},
+                            "status": {"type": "string", "enum": ["unlocked", "locked"], "description": "Node 1 should be unlocked, the rest locked."}
+                        },
+                        "required": ["id", "module_type", "title", "instructional_goal", "end_condition", "status"]
+                    }
+                }
+            },
+            "required": ["user_profile", "main_workflow", "learning_path"]
+        }
+    }
+}
 
-# RULES OF ENGAGEMENT
-1. **Dynamic Depth (5 to 8 Turns):** You must ask enough questions to get a solid technical baseline, but DO NOT exceed 8 conversational turns. Respect the user's time.
-2. **Conversational, Yet Dense:** You may ask up to 2 or 3 closely related questions in a single message. CRITICAL FORMATTING: You MUST use standard markdown newlines. Absolutely DO NOT use HTML tags like <br> or <br/> for spacing. Use actual carriage returns/newlines. If you ask multiple questions, you MUST format them as a numbered list (1., 2., 3.). You MUST place two full line breaks (\n\n) between each question so they are visually separated. NEVER combine them into a single inline paragraph. Example:
-"First question?
+ASSESSOR_SYSTEM_PROMPT = """You are the NeuroPath Knowledge Assessor. Your goal is to build a user's knowledge profile via interactive diagnosis.
 
-1. Second question?
+# CRITICAL RULES:
+1. **NO PLAIN TEXT QUESTIONS**: Never ask questions as plain text. Lead with a short (1-2 sentence) intro text, then call the `present_questions` tool.
+2. **EXACTLY 3 QUESTIONS**: Every time you call `present_questions`, you MUST provide exactly 3 distinct, high-quality questions.
+3. **FINISHING THE ASSESSMENT**: Once you have sufficient information (after ~2-3 rounds), you MUST call `update_knowledge_summary` IMMEDIATELY. 
+4. **DO NOT EXPLAIN FINISHING**: When calling `update_knowledge_summary`, do NOT provide any lead-in text like "I'll synthesize this now". Just call the tool. The tool call itself is the signal to move to the next phase.
 
-2. Third question?"
-3. **Probing, Not Trivia:** Do not ask them to write code or define terms. Ask about their practical experience, scale, and frameworks. 
-4. **Adaptive Pacing:** If the user gives highly detailed, multi-paragraph answers, you can assess them faster and end the assessment sooner. If they give one-word answers, gently probe deeper.
-5. **The Blank Slate Protocol (CRITICAL):** If the user claims they know absolutely nothing or are uncooperative, DO NOT immediately execute the tool. Gently coax them for 2 to 3 turns to find adjacent skills (e.g., "No problem! Have you ever used complex Excel formulas, or maybe tinkered with a basic website?"). If they still yield zero technical data after 3 attempts, end the chat and execute the tool.
-6. **The End Condition:** Once you have a comprehensive understanding of their known concepts and their critical knowledge gaps (or if you hit the turn limits), you MUST stop asking questions.
-7. **Tool Execution:** To end the session, you MUST execute the `update_knowledge_summary` tool. Pass in the detailed data you have gathered.
-8. **Final Message:** After (or alongside) calling the tool, provide a single, brief concluding sentence like: "Excellent, I have a clear picture of your skills now. Your knowledge profile is updated, and we are ready to start building your path!" Do not ask any follow-up questions after this.
-9. **Goal-Oriented Probing (CRITICAL):** You MUST tailor your questions specifically to the user's ULTIMATE LEARNING GOAL provided in the context below. Do not ask generic programming questions if they are irrelevant to their stated goal. Every question should be laser-focused on what they need to know to achieve that goal.
-10. **Narrative Summaries (CRITICAL):** When executing the `update_knowledge_summary` tool, you MUST write detailed, 3-4 sentence narrative paragraphs for both `strengths` and `weaknesses`. Do NOT use bullet points, arrays, or short lists. Write in prose, as a Senior Engineer would summarize a colleague's technical profile in a written review.
-
-# TONE
-Professional, encouraging, and highly analytical. You are a Senior Staff Engineer evaluating a new team member's capabilities—be thorough, but respectful of their time.
+# BEHAVIOR EXAMPLE:
+User: (answers the 2nd set of questions)
+Assistant: (calls update_knowledge_summary immediately with no text content)
 """
 
 knowledge_tool = {
@@ -112,18 +196,12 @@ async def chat_knowledge_setup(request: ChatRequest, current_user: User = Depend
         dynamic_context += (
             f"CURRENT KNOWLEDGE PROFILE: {current_user.knowledge_summary}\n"
             "INSTRUCTION: The user already possesses these skills. Your job is to assess their NEW skills "
-            "from this conversation and MERGE them with the existing profile. If they learn specific "
-            "sub-topics, condense them into broader categories (e.g., if the old profile has "
-            "'Python variables, loops' and they just learned 'functions', update the new summary to simply "
-            "say 'Python Basics Foundation').\n"
+            "from this conversation and MERGE them with the existing profile.\n"
         )
     else:
         dynamic_context += "CURRENT KNOWLEDGE PROFILE: Blank Slate. This is a new user.\n"
 
-    # Combine the dynamic context with the base system prompt
     full_system_prompt = dynamic_context + "\n" + ASSESSOR_SYSTEM_PROMPT
-
-    # Inject as the first system message
     messages = [{"role": "system", "content": full_system_prompt}] + request.messages
 
     async def event_generator():
@@ -133,12 +211,12 @@ async def chat_knowledge_setup(request: ChatRequest, current_user: User = Depend
                 messages=messages,
                 provider=request.provider,
                 injected_response=request.injected_response,
-                tools=[knowledge_tool],
+                tools=[knowledge_tool, present_questions_tool],
                 use_research=request.use_research
             ):
                 if event["type"] == "content":
                     safe_data = json.dumps({"text": event["data"]})
-                    debug_file.write(event["data"])  # Keep debug file working
+                    debug_file.write(event["data"])
                     debug_file.flush()
                     yield f"data: {safe_data}\n\n"
                 elif event["type"] == "tool_call":
@@ -150,10 +228,14 @@ async def chat_knowledge_setup(request: ChatRequest, current_user: User = Depend
                             yield 'data: {"status": "complete", "message": "Knowledge Summary Updated!"}\n\n'
                         except Exception as e:
                             yield f'data: {{"status": "error", "message": "Failed to parse tool arguments: {str(e)}"}}\n\n'
+                    elif event["name"] == "present_questions":
+                        yield f"data: {json.dumps({'type': 'mcq', 'data': event['arguments']})}\n\n"
+                        yield 'data: {"status": "mcq_sent"}\n\n'
                 elif event["type"] == "error":
                     yield f"data: {event['data']}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @router.post("/generate-path")
 async def chat_generate_path(
@@ -218,12 +300,20 @@ You are operating in God Mode to assist the developer in testing the platform.
 # STANDARD BEHAVIORAL RULES
 1. **The Readiness Check (Don't Rush):** Compare what they want to learn against their Current Knowledge Profile. If they lack critical prerequisites, you MUST pivot. Gently explain the gap and propose building a foundation first.
 2. **The Q&A Phase:** If their request is broad, ask up to 3-5 targeted technical questions to figure out exactly where they should start.
-3. **The Pitch & Justification:** Propose a high-level outline (Max 10 modules). 
+3. **The Pitch & Justification (MANDATORY FORMAT):** Propose a high-level outline (Max 10 modules). 
+   - **CRITICAL**: You MUST wrap your syllabus outline in `<syllabus_proposal>` tags. 
+   - **Blueprint Format**: Each module should be a clear, high-impact card. DO NOT use plain markdown lists for the syllabus.
+     You MUST format each module card exactly like this:
+     <card>
+       <title>Module Title</title>
+       <description>A brief description of what this module covers and why it is important.</description>
+       <activity_type>The primary hands-on activity or learning method (e.g., Coding Lab, Case Study, Interactive Q&A)</activity_type>
+     </card>
    - IF RESEARCH MODE IS ON: You MUST explicitly mention specific tools, frameworks, or market shifts discovered in your live research. Use this data to justify why your proposed syllabus is the most "market-ready" path available today.
    - IF RESEARCH MODE IS OFF: Justify the path based on established pedagogical best practices and industry-standard documentation.
 4. **The Consent Gate:** End your pitch by explicitly asking for their approval. (e.g., "How does this outline look to you? Are we ready to build it?")
 5. **Tool Execution (CRITICAL):** DO NOT execute the `generate_learning_path` tool until the user explicitly agrees to your proposed outline (e.g., they say "Yes", "Looks good", "Let's do it").
-6. **NO RAW JSON (MANDATORY):** Absolutely NEVER output the JSON learning path as text in the chat. You MUST ONLY deliver the final syllabus by calling the `generate_learning_path` tool. If you output raw JSON in the chat, the system will fail.
+6. **NO RAW JSON (MANDATORY):** Absolutely NEVER output the JSON learning path as text in the chat. You MUST ONLY deliver the final syllabus by calling the `generate_learning_path` tool.
 """
 
     full_system_prompt = dynamic_context + "\n" + system_prompt
@@ -294,6 +384,7 @@ You are operating in God Mode to assist the developer in testing the platform.
                             "name": "research_market_demands",
                             "content": market_data
                         })
+                        # Removed is_new_message yield to maintain a single continuous bubble
                         break # Break inner loop, continue while True to let model respond
 
                     elif event["name"] == "generate_learning_path":
@@ -348,70 +439,3 @@ You are operating in God Mode to assist the developer in testing the platform.
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-generate_learning_path_tool = {
-    "type": "function",
-    "function": {
-        "name": "generate_learning_path",
-        "description": "Generates the final, highly detailed JSON syllabus state machine once the user has approved the learning path.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "user_profile": {
-                    "type": "object",
-                    "properties": {
-                        "user_request": {"type": "string", "description": "What the user explicitly asked to learn."},
-                        "user_learning_preferences": {"type": "string"},
-                        "skill_summary": {"type": "string", "description": "Brief summary of their current related skills."},
-                        "user_goal": {"type": "string"}
-                    },
-                    "required": ["user_request", "user_learning_preferences", "skill_summary", "user_goal"]
-                },
-                "main_workflow": {
-                    "type": "object",
-                    "properties": {
-                        "overall_target": {"type": "string", "description": "The ultimate project or goal of this specific path."},
-                        "dataset_configuration": {
-                            "type": "object",
-                            "description": "Optional. If this is a data/coding path, define a consistent dataset/project environment to use across all modules.",
-                            "properties": {
-                                "name": {"type": "string"},
-                                "context": {"type": "string"},
-                                "columns": {"type": "array", "items": {"type": "string"}},
-                                "purposeful_imperfections": {"type": "string"},
-                                "restrictions": {"type": "string"}
-                            }
-                        },
-                        "progression_roadmap": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "High-level names of the phases."
-                        },
-                        "global_assessment_rules": {"type": "string"}
-                    },
-                    "required": ["overall_target", "progression_roadmap", "global_assessment_rules"]
-                },
-                "learning_path": {
-                    "type": "array",
-                    "description": "The sequential modules. Maximum 10 items. The final item MUST be a capstone project.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "string", "description": "Unique identifier, e.g., py_basics_001"},
-                            "module_type": {
-                                "type": "string", 
-                                "enum": ["lesson", "project"], 
-                                "description": "Standard learning nodes are 'lesson'. The final capstone node MUST be 'project'."
-                            },
-                            "title": {"type": "string"},
-                            "instructional_goal": {"type": "string", "description": "What the AI tutor must teach or guide the user to build."},
-                            "end_condition": {"type": "string", "description": "The exact criteria or code the user must produce to pass this node."},
-                            "status": {"type": "string", "enum": ["unlocked", "locked"], "description": "Node 1 should be unlocked, the rest locked."}
-                        },
-                        "required": ["id", "module_type", "title", "instructional_goal", "end_condition", "status"]
-                    }
-                }
-            },
-            "required": ["user_profile", "main_workflow", "learning_path"]
-        }
-    }
-}

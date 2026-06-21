@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import "../styles/pages.css";
 import { LogoIcon } from "../components/Icons";
+import SyllabusRenderer from "../components/SyllabusRenderer";
 
 export default function SetupChatPage({ goal, difficulty, commitment, onBack, onFinish }) {
   const [messages, setMessages] = useState(goal ? [{ role: "user", content: goal }] : []);
@@ -300,7 +301,7 @@ export default function SetupChatPage({ goal, difficulty, commitment, onBack, on
                         </span>
                       </div>
                     ) : (
-                      msg.content
+                      msg.role === "user" ? msg.content : <SyllabusRenderer content={msg.content} />
                     )}
                   </div>
                 </div>

@@ -39,6 +39,12 @@ The final path must be highly specific, cohesive, and contain no more than 10 mo
 If it is a coding topic, create a cohesive underlying project that spans across the modules.
 The final module MUST be a capstone project.
 
+CRITICAL DIRECTIONS:
+1. Do NOT include any conversational filler, introductory text, or concluding text.
+2. Do NOT use markdown code blocks like ```json ... ``` inside your response.
+3. Do NOT use HTML or XML tags like <card> or <syllabus_proposal> anywhere in your text fields.
+4. All text values must be plain string summaries.
+
 # OUTPUT FORMAT
 You MUST return valid JSON exactly matching this schema:
 {{

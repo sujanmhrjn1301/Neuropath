@@ -30,7 +30,7 @@ async def generate_chat_stream(messages: list, provider: str, injected_response:
         print(f"🤖 MODEL: {model}\n")
     elif provider == "openrouter":
         client = AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
-        model = "google/gemini-2.0-flash-001"
+        model = "google/gemini-2.5-flash"
         print(f"\n📡 [STREAM] PROVIDER: OpenRouter")
         print(f"🤖 MODEL: {model}")
         print(f"🔍 RESEARCH MODE: {'ON (Using Tools)' if use_research else 'OFF'}\n")
@@ -84,6 +84,7 @@ async def generate_chat_stream(messages: list, provider: str, injected_response:
                 yield {"type": "content", "data": delta.content}
                 
         if is_tool_call:
+            print(f"DEBUG: Yielding Tool Call: {tool_call_name}")
             yield {
                 "type": "tool_call",
                 "name": tool_call_name,

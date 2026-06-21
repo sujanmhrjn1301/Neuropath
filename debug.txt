@@ -1479,3 +1479,376 @@ Excellent. Let's get a bit more specific about your experience with Power BI's e
 --- NEW STREAM ---
 Understood. That clarifies the landscape quite well.
 
+
+
+--- NEW STREAM ---
+Understood. To start, let's assess your experience with personal finance tools and budgeting methodologies.
+
+
+
+--- NEW STREAM ---
+Okay, let's dive in.
+
+
+
+--- NEW STREAM ---
+Understood. To help me tailor your path, I have a few quick questions about your current setup:
+
+
+--- NEW STREAM ---
+Okay, great. To start, let's get a sense of where you are with personal finance. Have you used any budgeting methods or tools before?
+
+
+--- NEW STREAM ---
+Okay, understood. To get a better feel for your starting point, could you tell me a bit more about your familiarity with basic financial concepts?
+
+
+
+--- NEW STREAM ---
+Got it. No problem at all. Since you're new to this, let's start with some fundamental concepts. How familiar are you with the idea of tracking income versus expenses?
+
+
+
+--- NEW STREAM ---
+That's a great start! Since you're already using Excel, how comfortable are you with using formulas to calculate totals and differences in your expenses?
+
+
+--- NEW STREAM ---
+Okay, let's begin. I'll ask some questions to understand your current knowledge level in personal finance.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's start by understanding your current knowledge of personal finance. I'll use multiple-choice questions to quickly assess your familiarity with key concepts.
+
+
+
+--- NEW STREAM ---
+Okay, let's dive into understanding your current knowledge regarding personal financing and budgeting.
+
+
+
+--- NEW STREAM ---
+Alright, to start, let's get a sense of your experience with some core personal finance concepts.
+
+
+
+--- NEW STREAM ---
+Okay, let's begin by assessing your understanding of financial planning concepts.
+
+
+
+--- NEW STREAM ---
+My apologies! Let's get started. First, I'd like to gauge your understanding of some fundamental personal finance concepts.
+
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Understood. To start, let's assess your current understanding of personal finance to tailor the learning path effectively.
+
+
+
+--- NEW STREAM ---
+Okay, I understand! To start, let's assess your current understanding of personal finance. I have a few questions to help me tailor the learning path to your specific needs.
+
+
+--- NEW STREAM ---
+Understood. To start, let's assess your current understanding of basic personal finance principles.
+
+
+--- NEW STREAM ---
+Okay, I can definitely help you with that!
+
+To start, let's gauge your current understanding of personal finance. I have a few questions related to your experience with financial management.
+
+
+
+--- NEW STREAM ---
+My apologies! It seems I jumped the gun. I will present the questions to you now.
+
+To begin tailoring your financial management learning path, I'd like to assess your current comfort level with budgeting:
+
+
+--- NEW STREAM ---
+Understood. To start, let's assess your current experience with budgeting tools and methodologies.
+
+
+--- NEW STREAM ---
+To better understand your starting point, let's explore your experience with financial planning and goal setting.
+
+
+--- NEW STREAM ---
+Okay! To tailor a learning plan for you, let's start with a few questions to understand your current financial management skills.
+
+
+--- NEW STREAM ---
+Thanks for the info! Let's dive a bit deeper into some specific areas to fine-tune your learning path.
+
+
+--- NEW STREAM ---
+Okay, I have a good grasp of where you're at. I'll synthesize this into a knowledge profile!
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin the assessment to better understand your current knowledge of personal finance. I will ask a few questions to help tailor the learning experience to your needs.
+
+
+
+--- NEW STREAM ---
+Okay, let's continue refining your knowledge profile. Here are some more questions related to budgeting, saving, and debt management.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin! To start, I need to assess your current understanding of some key personal finance concepts. Please answer the following questions.
+
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, I understand. Now let's dive a bit deeper into some related areas to further refine your knowledge profile. Please answer these questions:
+
+
+--- NEW STREAM ---
+Okay, just a few more clarifying questions to finalize your assessment. Please answer honestly!
+
+
+--- NEW STREAM ---
+Okay, let's begin by understanding your current skills related to personal finance and budgeting. I will ask a few questions to get a better grasp of your experience.
+
+
+
+--- NEW STREAM ---
+Okay, thanks for those answers. Let's dive a bit deeper into specific budgeting techniques and tools you might have encountered.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin with a few questions to better understand your current knowledge of personal finance.
+
+
+
+--- NEW STREAM ---
+Okay, let's dive a little deeper into your understanding of financial ratios and debt management.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin with some questions to better understand your current knowledge and experience with personal finance and budgeting.
+
+
+
+--- NEW STREAM ---
+Let's delve a bit deeper into your understanding of budgeting techniques and financial planning.
+
+
+--- NEW STREAM ---
+Ok, last set of questions to finalize your profile!
+
+
+--- NEW STREAM ---
+Okay, let's begin with a few questions to better understand your current knowledge and experience in personal finance and budgeting.
+
+
+
+--- NEW STREAM ---
+Thanks for answering those questions! Let's dive a bit deeper into some other areas of personal finance.
+
+
+--- NEW STREAM ---
+Alright, I have a good grasp of your current skill set now. Let's create your updated knowledge profile.
+
+
+--- NEW STREAM ---
+Okay, let's start by assessing your current understanding of RAG model evaluation.
+
+
+
+--- NEW STREAM ---
+Okay, I will ask a few more questions to better understand your current knowledge about RAG model evaluation.
+
+
+--- NEW STREAM ---
+Okay, I've gathered enough information to update your knowledge profile.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's start with a few questions to assess your current understanding of RAG model evaluation.
+
+
+
+--- NEW STREAM ---
+Got it. Let's try a different angle. These questions will help me understand where you're starting from with RAG evaluation.
+
+
+--- NEW STREAM ---
+Okay, I've gathered enough information to create a knowledge profile.
+
+
+--- NEW STREAM ---
+Okay, let's start with some questions to better understand your current knowledge of RAG model evaluation.
+
+
+
+--- NEW STREAM ---
+Thanks, those answers are helpful. Now, a few more questions to refine the assessment.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's start with some questions to better understand your current skills in evaluating RAG models.
+
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, I think I have a better sense now. Let's wrap things up.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin with some questions to better understand your current skills.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin with some questions to refine your knowledge profile regarding RAG evaluation.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin by exploring your understanding of different evaluation methodologies for RAG models.
+
+
+
+--- NEW STREAM ---
+Alright, let's delve a bit deeper into your familiarity with automated RAG evaluation and some key metrics.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's refine your existing knowledge profile related to RAG model evaluation. I'll start with some questions to better understand your practical experience with specific evaluation metrics and tools.
+
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay, let's begin by assessing your understanding of fine-tuning. I'll ask a few questions to get a better sense of your current knowledge.
+
+
+--- NEW STREAM ---
+It seems like there might be some misconceptions in the previous answers. Let's clarify some concepts with a new set of questions.
+
+
+--- NEW STREAM ---
+Okay, one more round to solidify your understanding. Here are a few more questions.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Okay! Let's dive a bit deeper into your current understanding of fine-tuning. I'm going to ask you a few questions to get a better sense of your experience.
+
+
+--- NEW STREAM ---
+Okay, great! To start, let's explore your current understanding of personal finance.
+
+
+
+--- NEW STREAM ---
+Okay, let's begin! To start, I'd like to get a sense of your existing knowledge and experience in HR. Please answer the following questions:
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+Thanks for sharing! Based on your responses, let's dive a bit deeper into some core HR areas. Please answer the following questions.
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+It's great to hear you're ready to start your assessment for data analysis! Let's begin by gauging your current experience and understanding.
+
+--- NEW STREAM ---
+It's great that you have some familiarity with statistical concepts and spreadsheet software! To understand your current skill level better regarding data analysis, I have a few more questions.
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---
+It's great to hear you're ready to start your assessment for data analysis! Let's begin by exploring your current understanding.
+
+--- NEW STREAM ---
+It's great to have you here! To start, I'd like to understand your current familiarity with data analysis. This will help me tailor the learning path to your needs.
+
+--- NEW STREAM ---
+
+
+--- NEW STREAM ---

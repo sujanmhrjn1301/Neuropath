@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import SyllabusRenderer from './SyllabusRenderer';
 
 const LearnChat = ({ token }) => {
     const navigate = useNavigate();
@@ -232,9 +233,7 @@ const LearnChat = ({ token }) => {
                                     <div className="message-content">
                                         {msg.role === 'assistant' ? (
                                             <div className="message-markdown">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                                    {msg.content.replace(/<br\s*\/?>/gi, '\n\n')}
-                                                </ReactMarkdown>
+                                                <SyllabusRenderer content={msg.content.replace(/<br\s*\/?>/gi, '\n\n')} />
                                                 {isStreaming && idx === messages.length - 1 && (
                                                     <span className="typing-cursor">▋</span>
                                                 )}
